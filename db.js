@@ -126,7 +126,7 @@ const SCHEMA_SQL = `
 
   CREATE TABLE IF NOT EXISTS user_coin_state (
     device_id             TEXT PRIMARY KEY,
-    balance               INTEGER NOT NULL DEFAULT 5,
+    balance               INTEGER NOT NULL DEFAULT 10,
     unlocked_theme_ids    TEXT[] NOT NULL DEFAULT '{}',
     streak_day            INTEGER NOT NULL DEFAULT 0,
     last_checkin_date     DATE,
@@ -144,10 +144,11 @@ const MIGRATIONS_SQL = `
   ALTER TABLE themes ADD COLUMN IF NOT EXISTS icons_preview_path     TEXT;
   ALTER TABLE themes ADD COLUMN IF NOT EXISTS widgets_preview_path   TEXT;
   ALTER TABLE themes ADD COLUMN IF NOT EXISTS price_coins            INTEGER NOT NULL DEFAULT 0;
-  -- Onboarding bonus: every new device_id INSERT auto-receives 5 free coins.
-  -- Update column default so future INSERTs (via getOrCreateState) get 5, not 0.
+  -- Onboarding bonus: every new device_id INSERT auto-receives 10 free coins
+  -- (COIN_ONBOARDING_BONUS in server.js — keep in sync).
+  -- Update column default so future INSERTs (via getOrCreateState) get 10, not 0/5.
   -- Existing rows are NOT retroactively bumped by this — only new devices going forward.
-  ALTER TABLE user_coin_state ALTER COLUMN balance SET DEFAULT 5;
+  ALTER TABLE user_coin_state ALTER COLUMN balance SET DEFAULT 10;
 `;
 
 async function ensureSchema() {

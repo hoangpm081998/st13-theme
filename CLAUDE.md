@@ -22,20 +22,6 @@ node cli.js remove-admin <email>      # cascades to their sessions
 
 There is no lint / test / typecheck script — CommonJS, no build step.
 
-Docker (`Dockerfile` + `docker-compose.yml`, image `st13-theme-api`):
-
-```bash
-docker compose up -d --build          # api only; Postgres + R2 are external (.env)
-docker compose -f docker-compose.yml -f docker-compose.localdb.yml up -d   # + Postgres 16 in-compose
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up          # bind-mount + node --watch
-docker compose exec st13-api node cli.js list-admins
-```
-
-Container port is fixed at 8787 (compose `environment` overrides `PORT` from
-`.env`); the host port comes from `HOST_PORT`. The container is `read_only` and
-non-root — nothing may be written to disk. The localdb overlay overrides
-`DATABASE_URL` to point at the `postgres` service.
-
 On cold start, if `admin_users` is empty and `ADMIN_INITIAL_PASSWORD` is set in `.env`, `server.js` seeds one admin (`ADMIN_INITIAL_EMAIL`, default `admin@example.com`).
 
 ## Architecture

@@ -718,11 +718,16 @@ const coinLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-const COIN_DAILY_CHECKIN_REWARDS = [1, 1, 2, 2, 2, 2, 10];   // Days 1..7
-const COIN_CYCLE_LENGTH = 7;
-const COIN_WATCH_ADS_CAP = 3;
-const COIN_NOTIF_BONUS_AMOUNT = 5;
-const COIN_ONBOARDING_BONUS = 5;   // Free coins granted on first-time device install.
+// Client mirrors these via Firebase Remote Config keys `daily_checkin_rewards`,
+// `watch_ad_reward_amount`, `watch_ad_daily_cap`, `notif_bonus_amount`, `initial_coin_grant`.
+// Nếu tune bên RC, PHẢI update ở đây (server is source of truth cho awarded amount).
+// TODO: chuyển sang Firebase Admin SDK để 1 source of truth, xóa drift trap.
+const COIN_DAILY_CHECKIN_REWARDS = [3, 5, 7, 10, 15, 20, 30];   // Days 1..7 — retention-first, ad-heavy app
+const COIN_CYCLE_LENGTH = COIN_DAILY_CHECKIN_REWARDS.length;
+const COIN_WATCH_ADS_CAP = 5;
+const COIN_WATCH_AD_REWARD_AMOUNT = 3;
+const COIN_NOTIF_BONUS_AMOUNT = 10;
+const COIN_ONBOARDING_BONUS = 10;   // Free coins granted on first-time device install.
 
 function isValidDeviceId(id) {
   return typeof id === 'string' && id.length > 0 && id.length <= 128 && /^[A-Za-z0-9_.:-]+$/.test(id);
@@ -976,7 +981,7 @@ app.post('/coin/watch-ad', express.json(), async (req, res) => {
     // requests still cap correctly because we run the check inside the UPDATE.
     const updated = await query(
       `UPDATE user_coin_state
-       SET balance = balance + 1,
+       SET balance = balance + $3,
            watch_ads_today = CASE
              WHEN watch_ads_today_date = CURRENT_DATE THEN watch_ads_today + 1
              ELSE 1
@@ -987,14 +992,14 @@ app.post('/coin/watch-ad', express.json(), async (req, res) => {
          AND (watch_ads_today_date IS NULL
               OR watch_ads_today_date < CURRENT_DATE
               OR watch_ads_today < $2)`,
-      [deviceId, COIN_WATCH_ADS_CAP],
+      [deviceId, COIN_WATCH_ADS_CAP, COIN_WATCH_AD_REWARD_AMOUNT],
     );
     if (updated.rowCount === 0) {
       const fresh = await readState(deviceId);
       return res.json({ ok: false, full: true, awarded: 0, ...stateToPayload(fresh) });
     }
     const fresh = await readState(deviceId);
-    res.json({ ok: true, awarded: 1, ...stateToPayload(fresh) });
+    res.json({ ok: true, awarded: COIN_WATCH_AD_REWARD_AMOUNT, ...stateToPayload(fresh) });
   } catch (err) {
     console.error('[coin/watch-ad]', err);
     res.status(500).json({ error: 'internal error' });
