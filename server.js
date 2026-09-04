@@ -708,6 +708,82 @@ app.post('/admin/themes/:id/restore', audit('restore'), async (req, res) => {
   }
 });
 
+// -------------------- coin config admin --------------------
+
+app.get('/admin/coin-config', (_req, res) => {
+  res.json({
+    dailyCheckinRewards: coinCfg.dailyCheckinRewards,
+    watchAdRewardAmount: coinCfg.watchAdRewardAmount,
+    watchAdDailyCap:     coinCfg.watchAdDailyCap,
+    notifBonusAmount:    coinCfg.notifBonusAmount,
+    initialCoinGrant:    coinCfg.initialCoinGrant,
+    updatedAt:           coinCfg.updatedAt,
+    updatedBy:           coinCfg.updatedBy,
+  });
+});
+
+app.put('/admin/coin-config', audit('coin-config-update'), async (req, res) => {
+  try {
+    const b = req.body || {};
+
+    // Validate each field. Any bad input rejects the whole PUT — partial edits
+    // would leave the config in a mixed old/new state that's confusing to reason about.
+    const errs = [];
+
+    let rewards = b.dailyCheckinRewards;
+    if (!Array.isArray(rewards) || rewards.length < 1 || rewards.length > 30) {
+      errs.push('dailyCheckinRewards must be an array of 1..30 ints');
+    } else {
+      rewards = rewards.map((x) => parseInt(x, 10));
+      if (rewards.some((n) => !Number.isFinite(n) || n < 0 || n > 10000)) {
+        errs.push('dailyCheckinRewards entries must be integers 0..10000');
+      }
+    }
+
+    const validateInt = (name, min, max) => {
+      const n = parseInt(b[name], 10);
+      if (!Number.isFinite(n) || n < min || n > max) {
+        errs.push(`${name} must be an integer ${min}..${max}`);
+        return null;
+      }
+      return n;
+    };
+    const watchAdRewardAmount = validateInt('watchAdRewardAmount', 0, 10000);
+    const watchAdDailyCap     = validateInt('watchAdDailyCap',     0, 100);
+    const notifBonusAmount    = validateInt('notifBonusAmount',    0, 100000);
+    const initialCoinGrant    = validateInt('initialCoinGrant',    0, 100000);
+
+    if (errs.length) return res.status(400).json({ error: 'invalid config', details: errs });
+
+    await query(
+      `UPDATE coin_config
+       SET daily_checkin_rewards  = $1,
+           watch_ad_reward_amount = $2,
+           watch_ad_daily_cap     = $3,
+           notif_bonus_amount     = $4,
+           initial_coin_grant     = $5,
+           updated_at             = NOW(),
+           updated_by             = $6
+       WHERE id = 1`,
+      [rewards, watchAdRewardAmount, watchAdDailyCap, notifBonusAmount, initialCoinGrant, req.adminEmail],
+    );
+    await loadCoinConfig();   // reload in-memory cache so getters return the new values immediately
+    res.json({
+      ok: true,
+      dailyCheckinRewards: coinCfg.dailyCheckinRewards,
+      watchAdRewardAmount: coinCfg.watchAdRewardAmount,
+      watchAdDailyCap:     coinCfg.watchAdDailyCap,
+      notifBonusAmount:    coinCfg.notifBonusAmount,
+      initialCoinGrant:    coinCfg.initialCoinGrant,
+      updatedAt:           coinCfg.updatedAt,
+      updatedBy:           coinCfg.updatedBy,
+    });
+  } catch (err) {
+    console.error('[coin-config PUT]', err);
+    res.status(500).json({ error: 'coin config update failed' });
+  }
+});
+
 // -------------------- coin economy endpoints --------------------
 
 // Anti-DoS on public coin endpoints — per-IP, generous but non-zero.
@@ -718,16 +794,52 @@ const coinLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Client mirrors these via Firebase Remote Config keys `daily_checkin_rewards`,
-// `watch_ad_reward_amount`, `watch_ad_daily_cap`, `notif_bonus_amount`, `initial_coin_grant`.
-// Nếu tune bên RC, PHẢI update ở đây (server is source of truth cho awarded amount).
-// TODO: chuyển sang Firebase Admin SDK để 1 source of truth, xóa drift trap.
-const COIN_DAILY_CHECKIN_REWARDS = [3, 5, 7, 10, 15, 20, 30];   // Days 1..7 — retention-first, ad-heavy app
-const COIN_CYCLE_LENGTH = COIN_DAILY_CHECKIN_REWARDS.length;
-const COIN_WATCH_ADS_CAP = 5;
-const COIN_WATCH_AD_REWARD_AMOUNT = 3;
-const COIN_NOTIF_BONUS_AMOUNT = 10;
-const COIN_ONBOARDING_BONUS = 10;   // Free coins granted on first-time device install.
+// Coin-economy knobs are admin-tunable via the "Coin Config" tab in admin.html.
+// Persisted in the `coin_config` table (singleton row id=1); an in-memory cache
+// [coinCfg] mirrors it and reloads on every successful PUT. Every /coin/* response
+// piggy-backs this config so the client stays in sync without a separate call.
+//
+// Cache seeds from DB on startup. If the DB read fails (fresh install, network),
+// we fall back to the same defaults that used to be hardcoded here so behaviour
+// is unchanged. See loadCoinConfig() + PUT /admin/coin-config below.
+const COIN_CFG_DEFAULTS = Object.freeze({
+  dailyCheckinRewards: [3, 5, 7, 10, 15, 20, 30],
+  watchAdRewardAmount: 3,
+  watchAdDailyCap: 5,
+  notifBonusAmount: 10,
+  initialCoinGrant: 10,
+});
+let coinCfg = { ...COIN_CFG_DEFAULTS, updatedAt: null, updatedBy: null };
+
+async function loadCoinConfig() {
+  try {
+    const { rows } = await query(
+      `SELECT daily_checkin_rewards, watch_ad_reward_amount, watch_ad_daily_cap,
+              notif_bonus_amount, initial_coin_grant, updated_at, updated_by
+       FROM coin_config WHERE id = 1`,
+    );
+    if (rows[0]) {
+      const r = rows[0];
+      coinCfg = {
+        dailyCheckinRewards: r.daily_checkin_rewards || COIN_CFG_DEFAULTS.dailyCheckinRewards,
+        watchAdRewardAmount: r.watch_ad_reward_amount,
+        watchAdDailyCap:     r.watch_ad_daily_cap,
+        notifBonusAmount:    r.notif_bonus_amount,
+        initialCoinGrant:    r.initial_coin_grant,
+        updatedAt:           r.updated_at,
+        updatedBy:           r.updated_by,
+      };
+    }
+  } catch (err) {
+    console.warn('[coin-config] load failed, keeping defaults:', err.message);
+  }
+}
+function coinDailyCheckinRewards() { return coinCfg.dailyCheckinRewards; }
+function coinCycleLength()         { return coinCfg.dailyCheckinRewards.length; }
+function coinWatchAdsCap()         { return coinCfg.watchAdDailyCap; }
+function coinWatchAdRewardAmount() { return coinCfg.watchAdRewardAmount; }
+function coinNotifBonusAmount()    { return coinCfg.notifBonusAmount; }
+function coinOnboardingBonus()     { return coinCfg.initialCoinGrant; }
 
 function isValidDeviceId(id) {
   return typeof id === 'string' && id.length > 0 && id.length <= 128 && /^[A-Za-z0-9_.:-]+$/.test(id);
@@ -786,8 +898,10 @@ async function getOrCreateState(deviceId) {
 // while `nextClaimDay` and `streakDay` are the raw running counters so we can display
 // "Streak: N days" and repeat the reward pattern across cycles.
 function rewardForStreakDay(streakDay) {
-  const idx = ((streakDay - 1) % COIN_CYCLE_LENGTH + COIN_CYCLE_LENGTH) % COIN_CYCLE_LENGTH;
-  return COIN_DAILY_CHECKIN_REWARDS[idx];
+  const rewards = coinDailyCheckinRewards();
+  const len = rewards.length;
+  const idx = ((streakDay - 1) % len + len) % len;
+  return rewards[idx];
 }
 
 function stateToPayload(row) {
@@ -804,7 +918,7 @@ function stateToPayload(row) {
     if (gap === 1) return row.streak_day + 1;   // Continuous, never resets
     return 1;                                    // Missed day → reset to 1
   })();
-  const dayInCycle = ((nextClaimDay - 1) % COIN_CYCLE_LENGTH) + 1;
+  const dayInCycle = ((nextClaimDay - 1) % coinCycleLength()) + 1;
   const canClaimToday = lastCheckin !== today;
   return {
     balance: row.balance,
@@ -820,7 +934,7 @@ function stateToPayload(row) {
       dayInCycle,
       todayReward: canClaimToday ? rewardForStreakDay(nextClaimDay) : 0,
     },
-    watchAdsCap: COIN_WATCH_ADS_CAP,
+    watchAdsCap: coinWatchAdsCap(),
   };
 }
 
@@ -847,9 +961,9 @@ app.post('/coin/init', express.json(), async (req, res) => {
     if (!isValidDeviceId(deviceId)) return res.status(400).json({ error: 'invalid device_id' });
     const seed = req.body?.seed || {};
     // Onboarding bonus floor: even if the local upgrade seed was 0/1/2, the user still
-    // gets at least COIN_ONBOARDING_BONUS on their first device state.
+    // gets at least the admin-configured `initial_coin_grant` on first state.
     const rawSeed = Math.max(0, Math.min(1_000_000, parseInt(seed.balance || 0, 10) || 0));
-    const seedBalance = Math.max(rawSeed, COIN_ONBOARDING_BONUS);
+    const seedBalance = Math.max(rawSeed, coinOnboardingBonus());
     const seedUnlocked = Array.isArray(seed.unlockedThemeIds)
       ? seed.unlockedThemeIds.filter((s) => typeof s === 'string' && s.length <= 64).slice(0, 500)
       : [];
@@ -974,7 +1088,9 @@ app.post('/coin/watch-ad', express.json(), async (req, res) => {
     const today = todayIso();
     const watchDate = prev.watch_ads_today_date;
     const used = watchDate === today ? prev.watch_ads_today : 0;
-    if (used >= COIN_WATCH_ADS_CAP) {
+    const cap = coinWatchAdsCap();
+    const reward = coinWatchAdRewardAmount();
+    if (used >= cap) {
       return res.json({ ok: false, full: true, awarded: 0, ...stateToPayload(prev) });
     }
     // Atomic: reset counter if the stored date < today, then increment. Concurrent
@@ -992,14 +1108,14 @@ app.post('/coin/watch-ad', express.json(), async (req, res) => {
          AND (watch_ads_today_date IS NULL
               OR watch_ads_today_date < CURRENT_DATE
               OR watch_ads_today < $2)`,
-      [deviceId, COIN_WATCH_ADS_CAP, COIN_WATCH_AD_REWARD_AMOUNT],
+      [deviceId, cap, reward],
     );
     if (updated.rowCount === 0) {
       const fresh = await readState(deviceId);
       return res.json({ ok: false, full: true, awarded: 0, ...stateToPayload(fresh) });
     }
     const fresh = await readState(deviceId);
-    res.json({ ok: true, awarded: COIN_WATCH_AD_REWARD_AMOUNT, ...stateToPayload(fresh) });
+    res.json({ ok: true, awarded: reward, ...stateToPayload(fresh) });
   } catch (err) {
     console.error('[coin/watch-ad]', err);
     res.status(500).json({ error: 'internal error' });
@@ -1012,6 +1128,7 @@ app.post('/coin/notif-bonus', express.json(), async (req, res) => {
     if (!isValidDeviceId(deviceId)) return res.status(400).json({ error: 'invalid device_id' });
     const state = await getOrCreateState(deviceId);
     if (state.notif_bonus_claimed) return res.json({ ok: false, alreadyClaimed: true, awarded: 0, ...stateToPayload(state) });
+    const bonus = coinNotifBonusAmount();
     const updated = await query(
       `UPDATE user_coin_state
        SET balance = balance + $2,
@@ -1019,14 +1136,14 @@ app.post('/coin/notif-bonus', express.json(), async (req, res) => {
            updated_at = NOW()
        WHERE device_id = $1
          AND notif_bonus_claimed = false`,
-      [deviceId, COIN_NOTIF_BONUS_AMOUNT],
+      [deviceId, bonus],
     );
     if (updated.rowCount === 0) {
       const fresh = await readState(deviceId);
       return res.json({ ok: false, alreadyClaimed: true, awarded: 0, ...stateToPayload(fresh) });
     }
     const fresh = await readState(deviceId);
-    res.json({ ok: true, awarded: COIN_NOTIF_BONUS_AMOUNT, ...stateToPayload(fresh) });
+    res.json({ ok: true, awarded: bonus, ...stateToPayload(fresh) });
   } catch (err) {
     console.error('[coin/notif-bonus]', err);
     res.status(500).json({ error: 'internal error' });
@@ -1071,6 +1188,9 @@ setInterval(async () => {
     await ensureSchema();
     console.log('[db] schema ready');
     await seedInitialAdmin();
+    // Load coin_config into memory ONCE at startup. Every PUT /admin/coin-config
+    // reloads it, so no per-request DB hit for the 5 knobs.
+    await loadCoinConfig();
     app.listen(PORT, () => {
       console.log(`theme-be   http://localhost:${PORT}`);
       console.log(`login      http://localhost:${PORT}/login.html`);

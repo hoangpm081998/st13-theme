@@ -4,95 +4,169 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Theme Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f7f7f8;
-    --panel: #ffffff;
-    --sidebar: #ffffff;
-    --text: #1d1d1f;
-    --text-2: #6e6e73;
-    --text-3: #a8a8ad;
-    --border: #ececee;
-    --border-strong: #d2d2d7;
-    --primary: #0071e3;
-    --primary-hover: #0077ed;
-    --primary-soft: #e6f0fc;
-    --danger: #ff3b30;
-    --danger-soft: #ffe5e3;
-    --success: #34c759;
-    --success-soft: #d5f2df;
-    --warning: #ff9500;
-    --warning-soft: #fff0d9;
-    --purple: #af52de;
-    --purple-soft: #f2e5fb;
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
-    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-    --shadow-lg: 0 12px 40px rgba(0,0,0,0.15);
-    --radius-sm: 6px;
-    --radius: 8px;
-    --radius-lg: 12px;
+    /* ==== Palette — Dark Neon ==== */
+    --bg: #07070d;
+    --bg-2: #0c0c16;
+    --panel: #12121f;
+    --panel-2: #1a1a2b;
+    --panel-3: #22223a;
+    --border: #22223a;
+    --border-strong: #2f2f4d;
+    --text: #f0f0f7;
+    --text-2: #a4a4c0;
+    --text-3: #74748e;
+
+    --primary: #7c7cff;
+    --primary-hover: #9494ff;
+    --primary-soft: rgba(124, 124, 255, 0.14);
+    --primary-glow: rgba(124, 124, 255, 0.45);
+    --accent: #c084fc;
+    --accent-glow: rgba(192, 132, 252, 0.45);
+
+    --danger: #ff5b6b;
+    --danger-soft: rgba(255, 91, 107, 0.14);
+    --danger-glow: rgba(255, 91, 107, 0.4);
+    --success: #4ade80;
+    --success-soft: rgba(74, 222, 128, 0.14);
+    --success-glow: rgba(74, 222, 128, 0.4);
+    --warning: #fbbf24;
+    --warning-soft: rgba(251, 191, 36, 0.14);
+
+    --gradient: linear-gradient(135deg, #7c7cff 0%, #c084fc 100%);
+    --gradient-text: linear-gradient(180deg, #ffffff 0%, #a4a4c0 100%);
+    --gradient-mesh:
+      radial-gradient(at 20% 0%, rgba(124,124,255,0.14) 0%, transparent 45%),
+      radial-gradient(at 85% 100%, rgba(192,132,252,0.10) 0%, transparent 50%);
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md: 0 8px 24px rgba(0,0,0,0.4);
+    --shadow-lg: 0 24px 60px rgba(0,0,0,0.6);
+    --glow-primary: 0 0 32px rgba(124,124,255,0.35);
+    --glow-accent: 0 0 32px rgba(192,132,252,0.35);
+
+    --radius-sm: 8px;
+    --radius: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 20px;
+
+    --fs-xs: 11px;
+    --fs-sm: 12px;
+    --fs-base: 14px;
+    --fs-md: 15px;
+    --fs-lg: 17px;
+    --fs-xl: 22px;
   }
 
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Inter", "SF Pro Display", system-ui, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
     background: var(--bg);
+    background-image: var(--gradient-mesh);
+    background-attachment: fixed;
     color: var(--text);
-    font-size: 14px;
-    line-height: 1.5;
+    font-size: var(--fs-base);
+    line-height: 1.55;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
   }
   button, input, select, textarea { font: inherit; color: inherit; }
   button { cursor: pointer; }
 
+  *:focus { outline: none; }
+  *:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection { background: var(--primary-soft); color: var(--text); }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a3a55; }
+
   /* ============ Layout ============ */
   .app {
     display: grid;
-    grid-template-columns: 240px 1fr;
+    grid-template-columns: 260px 1fr;
     min-height: 100vh;
   }
 
   .sidebar {
-    background: var(--sidebar);
+    background: rgba(18, 18, 31, 0.6);
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    padding: 20px 12px;
+    padding: 24px 14px;
     position: sticky; top: 0; height: 100vh;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
   .brand {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 12px 20px;
-    font-weight: 700; font-size: 15px;
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px 24px;
+    font-weight: 700; font-size: var(--fs-md);
   }
   .brand-mark {
-    width: 28px; height: 28px; border-radius: 8px;
-    background: linear-gradient(135deg, #0071e3, #af52de);
+    width: 32px; height: 32px; border-radius: var(--radius-sm);
+    background: var(--gradient);
     display: flex; align-items: center; justify-content: center;
-    color: #fff; font-size: 16px;
+    color: #fff; font-size: 18px;
+    box-shadow: var(--glow-primary);
   }
-  .nav { display: flex; flex-direction: column; gap: 2px; }
+  .brand-text {
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.01em;
+    font-weight: 800;
+  }
+
+  .nav { display: flex; flex-direction: column; gap: 4px; }
   .nav-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 12px; border-radius: var(--radius);
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; border-radius: var(--radius);
     color: var(--text-2); text-decoration: none;
-    font-size: 13.5px; font-weight: 500;
-    border: 0; background: transparent; width: 100%; text-align: left;
+    font-size: var(--fs-sm); font-weight: 500;
+    border: 1px solid transparent; background: transparent;
+    width: 100%; text-align: left;
+    transition: all 0.15s ease;
   }
-  .nav-item:hover { background: var(--bg); color: var(--text); }
-  .nav-item.active { background: var(--primary-soft); color: var(--primary); }
+  .nav-item:hover {
+    background: var(--panel-2);
+    color: var(--text);
+  }
+  .nav-item.active {
+    background: var(--primary-soft);
+    color: var(--primary);
+    border-color: rgba(124,124,255,0.25);
+    box-shadow: inset 0 0 20px rgba(124,124,255,0.08);
+  }
   .nav-item .count {
     margin-left: auto;
-    background: var(--bg); color: var(--text-2);
-    font-size: 11px; padding: 2px 7px; border-radius: 10px;
-    min-width: 20px; text-align: center;
+    background: var(--panel-2); color: var(--text-3);
+    font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 999px;
+    min-width: 22px; text-align: center;
   }
-  .nav-item.active .count { background: rgba(0,113,227,0.15); color: var(--primary); }
+  .nav-item.active .count {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 0 12px var(--primary-glow);
+  }
   .nav-section {
-    font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
-    color: var(--text-3); font-weight: 600;
-    padding: 20px 12px 6px;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-3); font-weight: 700;
+    padding: 20px 14px 6px;
   }
 
   .sidebar-footer {
@@ -103,81 +177,146 @@
     padding: 8px 12px;
   }
   .avatar {
-    width: 32px; height: 32px; border-radius: 50%;
-    background: linear-gradient(135deg, #0071e3, #af52de);
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--gradient);
     color: #fff; display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 600;
+    font-size: var(--fs-sm); font-weight: 700;
+    box-shadow: var(--glow-primary);
   }
   .user-info { flex: 1; min-width: 0; }
-  .user-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .user-role { font-size: 11px; color: var(--text-2); }
+  .user-name { font-size: var(--fs-sm); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+  .user-role { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
   .icon-btn {
-    background: transparent; border: 0; padding: 6px; border-radius: 6px;
-    color: var(--text-2); display: flex; align-items: center; justify-content: center;
+    background: transparent; border: 1px solid transparent;
+    padding: 8px; border-radius: var(--radius-sm);
+    color: var(--text-2);
+    display: flex; align-items: center; justify-content: center;
+    min-width: 34px; min-height: 34px;
+    transition: all 0.15s ease;
   }
-  .icon-btn:hover { background: var(--bg); color: var(--text); }
+  .icon-btn:hover {
+    background: var(--danger-soft);
+    border-color: rgba(255,91,107,0.3);
+    color: var(--danger);
+    box-shadow: 0 0 16px var(--danger-glow);
+  }
 
   /* ============ Main ============ */
   .main { display: flex; flex-direction: column; min-width: 0; }
   .topbar {
     display: flex; align-items: center; gap: 12px;
-    padding: 18px 32px;
+    padding: 20px 32px;
     border-bottom: 1px solid var(--border);
-    background: var(--panel);
+    background: rgba(12, 12, 22, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     position: sticky; top: 0; z-index: 10;
   }
-  .topbar h1 { margin: 0; font-size: 20px; font-weight: 700; }
-  .topbar .sub { color: var(--text-2); font-size: 13px; margin-left: 8px; }
+  .topbar h1 {
+    margin: 0; font-size: var(--fs-xl); font-weight: 800;
+    letter-spacing: -0.02em;
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .topbar .sub { color: var(--text-3); font-size: var(--fs-sm); margin-left: 8px; }
   .topbar-actions { margin-left: auto; display: flex; gap: 8px; }
 
-  .content { padding: 24px 32px 60px; }
+  .content { padding: 28px 32px 60px; }
 
   .toolbar {
-    display: flex; gap: 8px; margin-bottom: 20px;
+    display: flex; gap: 10px; margin-bottom: 24px;
     flex-wrap: wrap;
   }
   .search-input {
     flex: 1; min-width: 220px;
     background: var(--panel); border: 1px solid var(--border-strong); border-radius: var(--radius);
-    padding: 8px 12px 8px 34px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: 10px center;
+    padding: 10px 14px 10px 38px;
+    color: var(--text);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2374748e' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: 12px center;
+    transition: all 0.15s ease;
   }
-  .search-input:focus { outline: 2px solid var(--primary-soft); border-color: var(--primary); }
-  .filter-pills { display: flex; gap: 4px; }
+  .search-input::placeholder { color: var(--text-3); }
+  .search-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft), 0 0 24px rgba(124,124,255,0.12);
+  }
+  .filter-pills {
+    display: flex; gap: 4px;
+    background: var(--panel);
+    padding: 4px; border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
   .filter-pill {
-    background: var(--panel); border: 1px solid var(--border-strong); border-radius: var(--radius);
-    padding: 8px 12px; font-size: 13px; color: var(--text-2);
+    background: transparent; border: 0; border-radius: var(--radius-sm);
+    padding: 6px 14px; font-size: var(--fs-sm); color: var(--text-2);
+    font-weight: 500;
+    transition: all 0.15s ease;
   }
-  .filter-pill.active { background: var(--text); color: #fff; border-color: var(--text); }
+  .filter-pill:hover { color: var(--text); }
+  .filter-pill.active {
+    background: var(--gradient);
+    color: #fff;
+    box-shadow: 0 0 16px var(--primary-glow);
+  }
   .select {
     background: var(--panel); border: 1px solid var(--border-strong); border-radius: var(--radius);
-    padding: 8px 30px 8px 12px; font-size: 13px;
+    padding: 10px 32px 10px 14px; font-size: var(--fs-sm);
+    color: var(--text);
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 10px center;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2374748e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+    cursor: pointer;
+    transition: all 0.15s ease;
   }
+  .select:hover { border-color: var(--primary); }
 
   /* ============ Buttons ============ */
   .btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 8px 14px; border-radius: var(--radius);
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 16px; border-radius: var(--radius);
     border: 1px solid transparent; background: transparent;
-    font-size: 13px; font-weight: 600;
-    transition: 0.12s;
+    font-size: var(--fs-sm); font-weight: 600;
+    letter-spacing: -0.005em;
+    transition: all 0.18s ease;
   }
-  .btn-primary { background: var(--primary); color: #fff; }
-  .btn-primary:hover { background: var(--primary-hover); }
-  .btn-secondary { background: var(--panel); border-color: var(--border-strong); color: var(--text); }
-  .btn-secondary:hover { background: var(--bg); }
-  .btn-danger { background: var(--danger); color: #fff; }
-  .btn-danger:hover { background: #e0342a; }
+  .btn-primary {
+    background: var(--gradient);
+    color: #fff;
+    box-shadow: 0 0 24px var(--primary-glow);
+  }
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 32px var(--primary-glow), 0 0 32px var(--accent-glow);
+  }
+  .btn-secondary {
+    background: var(--panel);
+    border-color: var(--border-strong);
+    color: var(--text);
+  }
+  .btn-secondary:hover {
+    background: var(--panel-2);
+    border-color: var(--primary);
+    color: var(--primary);
+    box-shadow: 0 0 20px rgba(124,124,255,0.15);
+  }
+  .btn-danger {
+    background: var(--danger); color: #fff;
+    box-shadow: 0 0 24px var(--danger-glow);
+  }
+  .btn-danger:hover {
+    background: #ff7382;
+    box-shadow: 0 4px 32px var(--danger-glow);
+  }
   .btn-ghost { color: var(--text-2); }
-  .btn-ghost:hover { background: var(--bg); color: var(--text); }
-  .btn-sm { padding: 5px 10px; font-size: 12px; }
-  .btn[disabled] { opacity: 0.5; pointer-events: none; }
+  .btn-ghost:hover { background: var(--panel-2); color: var(--text); }
+  .btn-sm { padding: 6px 12px; font-size: var(--fs-xs); }
+  .btn[disabled] { opacity: 0.4; pointer-events: none; }
   .btn .spinner {
-    width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4);
+    width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3);
     border-top-color: #fff; border-radius: 50%;
     animation: spin 0.7s linear infinite;
   }
@@ -185,123 +324,172 @@
 
   /* ============ Table ============ */
   .table-card {
-    background: var(--panel); border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
+    background: var(--panel);
+    border-radius: var(--radius-lg);
     border: 1px solid var(--border);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
   }
+  .table-scroll { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; }
   thead th {
-    background: #fafafb;
+    background: var(--panel-2);
     text-align: left;
-    padding: 10px 14px;
-    font-size: 11px; font-weight: 600; color: var(--text-2);
-    text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 12px 16px;
+    font-size: 10px; font-weight: 700; color: var(--text-3);
+    text-transform: uppercase; letter-spacing: 0.08em;
     border-bottom: 1px solid var(--border);
     white-space: nowrap;
   }
-  thead th:first-child { border-top-left-radius: var(--radius-lg); }
-  thead th:last-child  { border-top-right-radius: var(--radius-lg); }
   tbody td {
-    padding: 12px 14px;
+    padding: 14px 16px;
     border-bottom: 1px solid var(--border);
     vertical-align: middle;
   }
   tbody tr:last-child td { border-bottom: 0; }
-  tbody tr:hover { background: #fafafb; }
-  .thumb-cell { width: 52px; }
+  tbody tr {
+    transition: background 0.12s ease;
+  }
+  tbody tr:hover {
+    background: rgba(124, 124, 255, 0.04);
+  }
+  .thumb-cell { width: 60px; }
   .thumb {
-    width: 40px; height: 40px; border-radius: 8px;
-    background: linear-gradient(135deg, var(--bg), #eaeaec);
+    width: 44px; height: 44px; border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, var(--panel-2), var(--panel-3));
     display: flex; align-items: center; justify-content: center;
-    color: var(--text-3); font-size: 10px; font-weight: 600;
+    color: var(--text-3); font-size: 10px; font-weight: 700;
     object-fit: cover; overflow: hidden;
+    border: 1px solid var(--border-strong);
   }
   .thumb img { width: 100%; height: 100%; object-fit: cover; }
-  .cell-name { font-weight: 600; }
-  .cell-id { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; color: var(--text-2); }
-  .cell-meta { font-size: 12px; color: var(--text-2); margin-top: 2px; }
-  .cell-mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; color: var(--text-2); }
+  .cell-name { font-weight: 600; color: var(--text); }
+  .cell-id { font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--fs-xs); color: var(--text-3); margin-top: 3px; }
+  .cell-meta { font-size: var(--fs-xs); color: var(--text-2); margin-top: 2px; }
+  .cell-mono { font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--fs-xs); color: var(--text-2); }
 
   /* ============ Chips / pills ============ */
   .chip {
     display: inline-flex; align-items: center;
-    padding: 3px 9px; border-radius: 12px;
-    font-size: 11px; font-weight: 700;
-    letter-spacing: 0.04em;
+    padding: 4px 10px; border-radius: 999px;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.06em;
+    border: 1px solid transparent;
   }
-  .chip-btn { border: 0; cursor: pointer; }
-  .chip-free { background: var(--success-soft); color: #0f5132; }
-  .chip-paid { background: var(--warning-soft); color: #7c5300; }
-  .chip-published { background: var(--success-soft); color: #0f5132; }
-  .chip-draft { background: var(--bg); color: var(--text-2); }
-  .chip-unpublished { background: var(--danger-soft); color: #842029; }
-  .chip-trash { background: var(--danger-soft); color: #842029; }
+  .chip-btn { cursor: pointer; transition: all 0.15s ease; }
+  .chip-btn:hover { transform: scale(1.05); }
+  .chip-free { background: var(--success-soft); color: var(--success); border-color: rgba(74,222,128,0.3); }
+  .chip-paid { background: var(--warning-soft); color: var(--warning); border-color: rgba(251,191,36,0.3); }
+  .chip-published { background: var(--success-soft); color: var(--success); border-color: rgba(74,222,128,0.3); }
+  .chip-draft { background: var(--panel-3); color: var(--text-2); border-color: var(--border-strong); }
+  .chip-unpublished { background: var(--danger-soft); color: var(--danger); border-color: rgba(255,91,107,0.3); }
+  .chip-trash { background: var(--danger-soft); color: var(--danger); border-color: rgba(255,91,107,0.3); }
 
   .status-select {
-    background: transparent; border: 1px solid var(--border);
-    padding: 4px 24px 4px 8px; border-radius: 6px;
-    font-size: 12px; font-weight: 600;
+    background: var(--panel-2);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    padding: 6px 26px 6px 10px; border-radius: var(--radius-sm);
+    font-size: var(--fs-xs); font-weight: 600;
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 6px center;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23a4a4c0' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center;
+    cursor: pointer;
+    transition: all 0.15s ease;
   }
+  .status-select:hover { border-color: var(--primary); box-shadow: 0 0 12px rgba(124,124,255,0.15); }
 
   .order-input {
-    width: 62px; padding: 4px 8px; font-size: 12px;
-    border: 1px solid var(--border); border-radius: 6px;
+    width: 68px; padding: 6px 10px; font-size: var(--fs-xs);
+    background: var(--panel-2);
+    border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+    color: var(--text);
     text-align: center;
+    transition: all 0.15s ease;
+  }
+  .order-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
   }
 
   /* ============ Row actions dropdown ============ */
   .row-actions { position: relative; }
   .row-actions-btn {
-    background: transparent; border: 0; padding: 6px 8px; border-radius: 6px;
-    color: var(--text-2); font-size: 16px; line-height: 1;
+    background: transparent; border: 1px solid transparent;
+    padding: 6px 10px; border-radius: var(--radius-sm);
+    color: var(--text-2); font-size: 18px; line-height: 1;
+    min-width: 32px; min-height: 32px;
+    transition: all 0.15s ease;
   }
-  .row-actions-btn:hover { background: var(--bg); color: var(--text); }
+  .row-actions-btn:hover {
+    background: var(--panel-2);
+    border-color: var(--border-strong);
+    color: var(--text);
+  }
   .row-menu {
     position: absolute; right: 0; top: 100%;
-    background: var(--panel); border: 1px solid var(--border);
-    border-radius: var(--radius); box-shadow: var(--shadow-md);
-    min-width: 200px; padding: 4px;
-    z-index: 20; margin-top: 4px;
+    background: var(--panel); border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg), 0 0 40px rgba(124,124,255,0.1);
+    min-width: 220px; padding: 6px;
+    z-index: 20; margin-top: 6px;
     display: none;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
-  .row-menu.open { display: block; }
+  .row-menu.open { display: block; animation: menuIn 0.15s ease; }
+  @keyframes menuIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
   .row-menu button {
-    display: flex; align-items: center; gap: 8px;
+    display: flex; align-items: center; gap: 10px;
     width: 100%; text-align: left;
-    padding: 8px 10px; border: 0; background: transparent;
-    border-radius: 6px; font-size: 13px; color: var(--text);
+    padding: 9px 12px; border: 0; background: transparent;
+    border-radius: var(--radius-sm); font-size: var(--fs-sm); color: var(--text);
+    transition: all 0.1s ease;
   }
-  .row-menu button:hover { background: var(--bg); }
+  .row-menu button:hover { background: var(--primary-soft); color: var(--primary); }
   .row-menu button.danger { color: var(--danger); }
-  .row-menu button.danger:hover { background: var(--danger-soft); }
+  .row-menu button.danger:hover { background: var(--danger-soft); color: var(--danger); }
   .row-menu hr { border: 0; border-top: 1px solid var(--border); margin: 4px 0; }
-  .row-menu svg { width: 14px; height: 14px; opacity: 0.65; }
+  .row-menu svg { width: 14px; height: 14px; opacity: 0.7; }
 
   /* ============ Empty state ============ */
   .empty {
-    text-align: center; padding: 80px 20px;
+    text-align: center; padding: 100px 20px;
     background: var(--panel); border-radius: var(--radius-lg);
     border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
   }
+  .empty::before {
+    content: '';
+    position: absolute; inset: -50%;
+    background: radial-gradient(circle at center, var(--primary-soft) 0%, transparent 40%);
+    z-index: 0;
+    pointer-events: none;
+  }
+  .empty > * { position: relative; z-index: 1; }
   .empty-icon {
-    width: 64px; height: 64px; margin: 0 auto 16px;
-    border-radius: 50%; background: var(--bg);
+    width: 72px; height: 72px; margin: 0 auto 20px;
+    border-radius: 50%; background: var(--panel-2);
     display: flex; align-items: center; justify-content: center;
-    color: var(--text-3);
+    color: var(--primary);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--glow-primary);
   }
-  .empty h3 { margin: 0 0 6px; font-size: 16px; }
-  .empty p { margin: 0 0 20px; color: var(--text-2); font-size: 13px; }
+  .empty h3 { margin: 0 0 8px; font-size: var(--fs-lg); color: var(--text); font-weight: 700; letter-spacing: -0.01em; }
+  .empty p { margin: 0 0 24px; color: var(--text-2); font-size: var(--fs-sm); }
 
   /* ============ Loading skeleton ============ */
   .skeleton-row td { position: relative; }
   .skel {
     display: inline-block; height: 12px; border-radius: 4px;
-    background: linear-gradient(90deg, #ececee 0%, #f7f7f8 50%, #ececee 100%);
+    background: linear-gradient(90deg, var(--panel-2) 0%, var(--panel-3) 50%, var(--panel-2) 100%);
     background-size: 200% 100%;
-    animation: shimmer 1.2s linear infinite;
+    animation: shimmer 1.5s linear infinite;
   }
   .skel.wide { width: 120px; }
   .skel.narrow { width: 40px; }
@@ -309,132 +497,205 @@
 
   /* ============ Modal ============ */
   .backdrop {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.4);
-    backdrop-filter: blur(4px);
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     display: flex; align-items: center; justify-content: center;
     z-index: 100; padding: 20px;
-    animation: fadeIn 0.15s ease;
+    animation: fadeIn 0.2s ease;
   }
   @keyframes fadeIn { from { opacity: 0; } }
   .modal {
-    background: var(--panel); border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
+    background: var(--panel);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-lg), 0 0 80px rgba(124,124,255,0.15);
     width: 100%; max-width: 560px; max-height: 90vh;
     display: flex; flex-direction: column;
-    animation: slideUp 0.2s ease;
+    animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
   @keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(24px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
   .modal-header {
-    padding: 20px 24px 12px;
-    display: flex; align-items: center; justify-content: space-between;
+    padding: 24px 28px 16px;
+    display: flex; align-items: flex-start; justify-content: space-between;
   }
-  .modal-header h2 { margin: 0; font-size: 17px; font-weight: 700; }
-  .modal-header p { margin: 4px 0 0; font-size: 13px; color: var(--text-2); }
+  .modal-header h2 {
+    margin: 0; font-size: var(--fs-lg); font-weight: 700;
+    letter-spacing: -0.01em; color: var(--text);
+  }
+  .modal-header p { margin: 6px 0 0; font-size: var(--fs-sm); color: var(--text-2); }
   .modal-body {
-    padding: 8px 24px 20px;
+    padding: 8px 28px 24px;
     overflow-y: auto;
     flex: 1;
   }
   .modal-footer {
-    padding: 16px 24px;
+    padding: 16px 28px;
     border-top: 1px solid var(--border);
-    display: flex; justify-content: flex-end; gap: 8px;
+    display: flex; justify-content: flex-end; gap: 10px;
   }
 
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .form-row.single { grid-template-columns: 1fr; }
-  .form-field { margin-bottom: 14px; }
+  .form-field { margin-bottom: 16px; }
   .form-field label {
-    display: block; font-size: 12px; color: var(--text-2);
-    font-weight: 500; margin-bottom: 6px;
+    display: block; font-size: var(--fs-xs); color: var(--text-2);
+    font-weight: 600; margin-bottom: 6px;
+    letter-spacing: 0.02em;
   }
   .form-field input[type="text"], .form-field input[type="number"], .form-field select {
-    width: 100%; padding: 8px 12px;
+    width: 100%; padding: 10px 14px;
+    background: var(--panel-2);
     border: 1px solid var(--border-strong); border-radius: var(--radius);
-    font-size: 14px;
+    color: var(--text);
+    font-size: var(--fs-base);
+    transition: all 0.15s ease;
   }
   .form-field input[type="text"]:focus, .form-field input[type="number"]:focus, .form-field select:focus {
-    outline: 2px solid var(--primary-soft); border-color: var(--primary);
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
   }
   .form-field .locked {
-    background: var(--bg); color: var(--text-2);
+    background: var(--bg);
+    color: var(--text-3);
     cursor: not-allowed;
   }
-  .form-field .hint { display: block; font-size: 11px; color: var(--text-3); margin-top: 4px; }
+  .form-field .hint {
+    display: block; font-size: var(--fs-xs); color: var(--text-2);
+    margin-top: 6px; line-height: 1.55;
+  }
+  .form-field .hint code {
+    background: var(--panel-3);
+    padding: 1px 6px; border-radius: 4px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px;
+    color: var(--primary);
+    border: 1px solid var(--border-strong);
+  }
 
   .file-drop {
     border: 2px dashed var(--border-strong); border-radius: var(--radius);
-    padding: 20px; text-align: center;
-    background: var(--bg); cursor: pointer;
-    transition: 0.15s;
+    padding: 24px; text-align: center;
+    background: var(--panel-2); cursor: pointer;
+    transition: all 0.15s ease;
   }
-  .file-drop:hover { border-color: var(--primary); background: var(--primary-soft); }
-  .file-drop.has-file { border-style: solid; border-color: var(--success); background: var(--success-soft); }
-  .file-drop svg { width: 28px; height: 28px; color: var(--text-2); margin-bottom: 6px; }
-  .file-drop .name { font-size: 13px; font-weight: 600; }
-  .file-drop .meta { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+  .file-drop:hover {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+    box-shadow: 0 0 24px rgba(124,124,255,0.15);
+  }
+  .file-drop.has-file {
+    border-style: solid;
+    border-color: var(--success);
+    background: var(--success-soft);
+    box-shadow: 0 0 24px var(--success-glow);
+  }
+  .file-drop svg { width: 32px; height: 32px; color: var(--text-2); margin-bottom: 8px; }
+  .file-drop:hover svg { color: var(--primary); }
+  .file-drop.has-file svg { color: var(--success); }
+  .file-drop .name { font-size: var(--fs-sm); font-weight: 600; color: var(--text); }
+  .file-drop .meta { font-size: var(--fs-xs); color: var(--text-2); margin-top: 4px; }
   .file-drop input { display: none; }
 
-  .progress { height: 4px; background: var(--bg); border-radius: 2px; overflow: hidden; margin-top: 8px; display: none; }
+  .progress { height: 4px; background: var(--panel-2); border-radius: 2px; overflow: hidden; margin-top: 10px; display: none; }
   .progress.active { display: block; }
   .progress-bar {
-    height: 100%; background: var(--primary);
-    width: 0; transition: width 0.15s ease;
+    height: 100%;
+    background: var(--gradient);
+    width: 0; transition: width 0.2s ease;
+    box-shadow: 0 0 12px var(--primary-glow);
   }
 
   /* ============ Toast ============ */
   .toasts {
-    position: fixed; top: 20px; right: 20px; z-index: 200;
-    display: flex; flex-direction: column; gap: 8px;
+    position: fixed; top: 24px; right: 24px; z-index: 200;
+    display: flex; flex-direction: column; gap: 10px;
     pointer-events: none;
   }
   .toast {
-    background: var(--panel); border: 1px solid var(--border);
-    border-radius: var(--radius); box-shadow: var(--shadow-md);
-    padding: 12px 16px; min-width: 280px; max-width: 400px;
-    display: flex; align-items: flex-start; gap: 10px;
+    background: rgba(18, 18, 31, 0.9);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: 14px 18px; min-width: 300px; max-width: 420px;
+    display: flex; align-items: flex-start; gap: 12px;
     pointer-events: auto;
-    animation: toastIn 0.2s ease;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    animation: toastIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
   @keyframes toastIn {
-    from { opacity: 0; transform: translateX(20px); }
-    to { opacity: 1; transform: translateX(0); }
+    from { opacity: 0; transform: translateX(24px) scale(0.96); }
+    to { opacity: 1; transform: translateX(0) scale(1); }
   }
   .toast.out { animation: toastOut 0.2s ease forwards; }
   @keyframes toastOut {
-    to { opacity: 0; transform: translateX(20px); }
+    to { opacity: 0; transform: translateX(24px); }
   }
   .toast-icon {
-    flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     color: #fff; font-size: 12px; font-weight: 700;
   }
-  .toast-success .toast-icon { background: var(--success); }
-  .toast-error .toast-icon { background: var(--danger); }
-  .toast-info .toast-icon { background: var(--primary); }
-  .toast-body { flex: 1; font-size: 13px; }
-  .toast-title { font-weight: 600; }
-  .toast-desc { color: var(--text-2); margin-top: 2px; word-break: break-all; }
+  .toast-success .toast-icon { background: var(--success); box-shadow: 0 0 16px var(--success-glow); }
+  .toast-success { border-color: rgba(74,222,128,0.3); }
+  .toast-error .toast-icon { background: var(--danger); box-shadow: 0 0 16px var(--danger-glow); }
+  .toast-error { border-color: rgba(255,91,107,0.3); }
+  .toast-info .toast-icon { background: var(--primary); box-shadow: 0 0 16px var(--primary-glow); }
+  .toast-info { border-color: rgba(124,124,255,0.3); }
+  .toast-body { flex: 1; font-size: var(--fs-sm); }
+  .toast-title { font-weight: 600; color: var(--text); }
+  .toast-desc { color: var(--text-2); margin-top: 3px; word-break: break-all; font-size: var(--fs-xs); }
 
   /* ============ Manifest debug ============ */
   .manifest-card {
     background: var(--panel); border-radius: var(--radius-lg);
     border: 1px solid var(--border);
-    padding: 20px; margin-top: 24px;
+    padding: 24px; margin-top: 28px;
   }
   .manifest-card h3 {
-    margin: 0 0 12px; font-size: 14px; font-weight: 600;
+    margin: 0 0 14px; font-size: var(--fs-base); font-weight: 700;
     display: flex; align-items: center; gap: 8px;
+    color: var(--text); letter-spacing: -0.01em;
   }
+  .manifest-card h3 svg { color: var(--primary); }
   .manifest-card pre {
-    background: #1d1d1f; color: #f5f5f7;
-    padding: 14px; border-radius: var(--radius);
-    font-size: 12px; overflow-x: auto; max-height: 360px;
-    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    background: var(--bg);
+    color: #e0e0f0;
+    padding: 16px; border-radius: var(--radius);
+    font-size: var(--fs-xs); overflow-x: auto; max-height: 400px;
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, monospace;
     margin: 0;
+    border: 1px solid var(--border);
+    line-height: 1.65;
+  }
+
+  /* ============ Responsive ============ */
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar {
+      position: relative;
+      height: auto;
+      border-right: 0;
+      border-bottom: 1px solid var(--border);
+      padding: 16px;
+    }
+    .nav { flex-direction: row; overflow-x: auto; padding-bottom: 4px; gap: 6px; }
+    .nav-item { flex-shrink: 0; }
+    .sidebar-footer { display: none; }
+    .content { padding: 20px 16px 60px; }
+    .topbar { padding: 16px 20px; }
+    .topbar h1 { font-size: var(--fs-lg); }
+    .topbar .sub { display: none; }
+    .form-row { grid-template-columns: 1fr; }
+    .modal { max-width: 100%; }
+    .toolbar { flex-direction: column; align-items: stretch; }
+    .filter-pills { overflow-x: auto; }
   }
 </style>
 </head>
@@ -443,21 +704,21 @@
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
-      <div class="brand-mark">🎨</div>
-      <span>Theme Admin</span>
+      <div class="brand-mark" aria-hidden="true">🎨</div>
+      <span class="brand-text">Theme Admin</span>
     </div>
 
-    <nav class="nav" id="nav"></nav>
+    <nav class="nav" id="nav" aria-label="Main navigation"></nav>
 
     <div class="sidebar-footer">
       <div class="user">
-        <div class="avatar" id="avatar">?</div>
+        <div class="avatar" id="avatar" aria-hidden="true">?</div>
         <div class="user-info">
           <div class="user-name" id="whoami">…</div>
           <div class="user-role">Admin</div>
         </div>
-        <button class="icon-btn" title="Đăng xuất" onclick="logout()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <button class="icon-btn" aria-label="Đăng xuất" title="Đăng xuất" onclick="logout()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </button>
       </div>
     </div>
@@ -468,12 +729,12 @@
       <h1 id="view-title">Themes</h1>
       <span class="sub" id="view-sub"></span>
       <div class="topbar-actions">
-        <button class="btn btn-secondary" onclick="refresh()" title="Reload">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        <button class="btn btn-secondary" onclick="refresh()" title="Reload" aria-label="Reload">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
           Refresh
         </button>
         <button class="btn btn-primary" onclick="openUploadModal()" id="upload-btn">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Upload theme
         </button>
       </div>
@@ -483,7 +744,7 @@
   </main>
 </div>
 
-<div class="toasts" id="toasts"></div>
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <div id="modal-root"></div>
 
 <script>
@@ -569,10 +830,10 @@ function confirmDialog({ title, desc, confirmText = 'Confirm', danger = false })
     const root = $('#modal-root');
     root.innerHTML = `
       <div class="backdrop" id="_confirm">
-        <div class="modal" style="max-width: 420px;">
+        <div class="modal" style="max-width: 420px;" role="dialog" aria-modal="true" aria-labelledby="_confirm_title">
           <div class="modal-header">
             <div>
-              <h2>${esc(title)}</h2>
+              <h2 id="_confirm_title">${esc(title)}</h2>
               ${desc ? `<p>${esc(desc)}</p>` : ''}
             </div>
           </div>
@@ -589,31 +850,33 @@ function confirmDialog({ title, desc, confirmText = 'Confirm', danger = false })
       if (act === 'cancel') close(false);
       if (act === 'ok') close(true);
     });
-    document.addEventListener('keydown', function esc(e) {
-      if (e.key === 'Escape') { close(false); document.removeEventListener('keydown', esc); }
+    document.addEventListener('keydown', function escKey(e) {
+      if (e.key === 'Escape') { close(false); document.removeEventListener('keydown', escKey); }
     });
   });
 }
 
 // ============ State ============
 const state = {
-  view: 'themes',      // 'themes' | 'trash'
+  view: 'themes',      // 'themes' | 'coin' | 'trash'
   themes: null,        // array or null (loading)
   trash: null,
+  coin: null,          // {dailyCheckinRewards, watchAdRewardAmount, ...} or null (loading)
   search: '',
   statusFilter: 'all', // 'all' | 'published' | 'draft' | 'unpublished'
   sortBy: 'newest',    // 'newest' | 'oldest' | 'order' | 'size' | 'name'
 };
 
 const NAV = [
-  { key: 'themes', label: 'Themes', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' },
-  { key: 'trash', label: 'Recycle Bin', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>' },
+  { key: 'themes', label: 'Themes', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' },
+  { key: 'coin', label: 'Coin Config', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9 9c0-1.1 1.3-2 3-2s3 .9 3 2-1.3 2-3 2-3 .9-3 2 1.3 2 3 2 3-.9 3-2"/><path d="M12 6v1M12 17v1"/></svg>' },
+  { key: 'trash', label: 'Thùng rác', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>' },
 ];
 
 function renderNav() {
   const el = $('#nav');
   el.innerHTML = NAV.map(({ key, label, icon }) => `
-    <button class="nav-item ${state.view === key ? 'active' : ''}" data-view="${key}">
+    <button class="nav-item ${state.view === key ? 'active' : ''}" data-view="${key}" aria-current="${state.view === key ? 'page' : 'false'}">
       ${icon}
       <span>${label}</span>
       <span class="count" data-count="${key}">${(state[key] || []).length || ''}</span>
@@ -660,11 +923,17 @@ const api = {
       method: 'POST', body: fd,
     }).then(r => r.json());
   },
+  getCoinConfig:  () => fetch('/admin/coin-config').then(r => r.json()),
+  saveCoinConfig: (body) => fetch('/admin/coin-config', {
+    method: 'PUT', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(async (r) => ({ ok: r.ok, status: r.status, data: await r.json() })),
 };
 
 async function loadView(v) {
   try {
-    state[v] = await api.themes(v === 'trash');
+    if (v === 'coin') state.coin = await api.getCoinConfig();
+    else              state[v]   = await api.themes(v === 'trash');
     renderNav();
     render();
   } catch (err) {
@@ -673,7 +942,7 @@ async function loadView(v) {
 }
 
 function refresh() {
-  state.themes = null; state.trash = null;
+  state.themes = null; state.trash = null; state.coin = null;
   render();
   loadView(state.view);
 }
@@ -701,9 +970,10 @@ function currentRows() {
 
 // ============ Render ============
 function render() {
-  const titles = { themes: 'Themes', trash: 'Recycle Bin' };
+  const titles = { themes: 'Themes', coin: 'Coin Config', trash: 'Thùng rác' };
   const subs = {
     themes: 'Quản lý theme + upload lên Cloudflare R2',
+    coin: 'Chỉnh số coin — daily check-in, watch ad, notif bonus, onboarding grant',
     trash: 'Theme đã xoá — 30 ngày sau tự purge vĩnh viễn',
   };
   $('#view-title').textContent = titles[state.view];
@@ -714,6 +984,12 @@ function render() {
   const content = $('#content');
 
   if (src === null) { content.innerHTML = renderLoading(); return; }
+
+  if (state.view === 'coin') {
+    content.innerHTML = renderCoinConfig(src);
+    bindCoinConfig();
+    return;
+  }
 
   const rows = currentRows();
   const toolbar = renderToolbar();
@@ -726,8 +1002,139 @@ function render() {
   if (state.view === 'themes') loadManifest();
 }
 
+// ============ Coin Config view ============
+function renderCoinConfig(cfg) {
+  const rewards = Array.isArray(cfg.dailyCheckinRewards) ? cfg.dailyCheckinRewards : [];
+  const rewardInputs = rewards.map((v, i) => `
+    <div class="form-field" style="min-width: 90px; margin-bottom: 0;">
+      <label>Day ${i + 1}</label>
+      <input type="number" min="0" max="10000" step="1" data-reward-day="${i}" value="${esc(v)}" />
+    </div>`).join('');
+  const updated = cfg.updatedAt
+    ? `Cập nhật lần cuối: ${fmtDate(cfg.updatedAt)}${cfg.updatedBy ? ' bởi ' + esc(cfg.updatedBy) : ''}`
+    : 'Chưa từng cập nhật';
+  return `
+    <div class="table-card" style="padding: 28px;">
+      <form id="coin-config-form">
+        <div style="margin-bottom: 24px;">
+          <label style="font-weight: 700; font-size: var(--fs-base); color: var(--text); display: block; margin-bottom: 6px; letter-spacing: -0.01em;">
+            Daily check-in rewards
+          </label>
+          <p class="hint" style="margin: 0 0 14px; color: var(--text-2); font-size: var(--fs-sm);">
+            Chu kỳ ${rewards.length} ngày, lặp lại vô hạn. Day 1 = ngày đầu tiên user check-in.
+          </p>
+          <div id="rewards-grid" style="display: flex; flex-wrap: wrap; gap: 10px;">
+            ${rewardInputs}
+          </div>
+          <div style="margin-top: 12px; display: flex; gap: 8px;">
+            <button type="button" class="btn btn-secondary btn-sm" id="reward-add" ${rewards.length >= 30 ? 'disabled' : ''}>+ Thêm ngày</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="reward-remove" ${rewards.length <= 1 ? 'disabled' : ''}>− Bỏ ngày cuối</button>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label>Watch ad reward amount</label>
+            <input type="number" name="watchAdRewardAmount" min="0" max="10000" value="${esc(cfg.watchAdRewardAmount)}" />
+            <span class="hint">Số coin thưởng cho mỗi rewarded ad hoàn tất.</span>
+          </div>
+          <div class="form-field">
+            <label>Watch ad daily cap</label>
+            <input type="number" name="watchAdDailyCap" min="0" max="100" value="${esc(cfg.watchAdDailyCap)}" />
+            <span class="hint">Số lần user được xem rewarded ad tối đa mỗi ngày.</span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label>Notification bonus amount</label>
+            <input type="number" name="notifBonusAmount" min="0" max="100000" value="${esc(cfg.notifBonusAmount)}" />
+            <span class="hint">Coin thưởng 1-lần khi user bật quyền notification.</span>
+          </div>
+          <div class="form-field">
+            <label>Initial coin grant</label>
+            <input type="number" name="initialCoinGrant" min="0" max="100000" value="${esc(cfg.initialCoinGrant)}" />
+            <span class="hint">Coin free cho user mới cài (áp dụng ở /coin/init).</span>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border);">
+          <span class="hint" style="color: var(--text-3);">${updated}</span>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-ghost" id="coin-cancel">Huỷ thay đổi</button>
+            <button type="submit" class="btn btn-primary" id="coin-save">Lưu</button>
+          </div>
+        </div>
+      </form>
+    </div>`;
+}
+
+function bindCoinConfig() {
+  const form = $('#coin-config-form');
+  if (!form) return;
+
+  $('#reward-add').onclick = () => {
+    const grid = $('#rewards-grid');
+    const days = $$('input[data-reward-day]', grid);
+    if (days.length >= 30) return;
+    const nextIdx = days.length;
+    const wrap = document.createElement('div');
+    wrap.className = 'form-field';
+    wrap.style.minWidth = '90px';
+    wrap.style.marginBottom = '0';
+    wrap.innerHTML = `<label>Day ${nextIdx + 1}</label><input type="number" min="0" max="10000" step="1" data-reward-day="${nextIdx}" value="0" />`;
+    grid.appendChild(wrap);
+    $('#reward-remove').disabled = false;
+    $('#reward-add').disabled = nextIdx + 1 >= 30;
+  };
+
+  $('#reward-remove').onclick = () => {
+    const grid = $('#rewards-grid');
+    const days = $$('input[data-reward-day]', grid);
+    if (days.length <= 1) return;
+    days[days.length - 1].parentElement.remove();
+    $('#reward-add').disabled = false;
+    $('#reward-remove').disabled = days.length - 1 <= 1;
+  };
+
+  $('#coin-cancel').onclick = () => {
+    state.coin = null;
+    render();
+    loadView('coin');
+  };
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const dailyCheckinRewards = $$('input[data-reward-day]', form).map((i) => parseInt(i.value, 10));
+    const body = {
+      dailyCheckinRewards,
+      watchAdRewardAmount: parseInt(form.watchAdRewardAmount.value, 10),
+      watchAdDailyCap:     parseInt(form.watchAdDailyCap.value, 10),
+      notifBonusAmount:    parseInt(form.notifBonusAmount.value, 10),
+      initialCoinGrant:    parseInt(form.initialCoinGrant.value, 10),
+    };
+    const btn = $('#coin-save');
+    btn.disabled = true; btn.textContent = 'Đang lưu…';
+    try {
+      const res = await api.saveCoinConfig(body);
+      if (!res.ok) {
+        const msg = (res.data.details || []).join(', ') || res.data.error || `HTTP ${res.status}`;
+        toast('Lưu thất bại', msg, 'error');
+        return;
+      }
+      state.coin = res.data;
+      render();
+      toast('Đã lưu', 'Config mới có hiệu lực ngay cho mọi request coin.', 'success');
+    } catch (err) {
+      toast('Lưu thất bại', err.message, 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Lưu';
+    }
+  };
+}
+
 function renderLoading() {
-  return `<div class="table-card"><table>
+  return `<div class="table-card"><div class="table-scroll"><table>
     <thead><tr><th>Theme</th><th>Free</th><th>Order</th><th>Ver</th><th>Size</th><th>Price</th><th>Status</th><th></th></tr></thead>
     <tbody>${Array.from({ length: 4 }).map(() => `
       <tr class="skeleton-row">
@@ -739,24 +1146,24 @@ function renderLoading() {
         <td><span class="skel narrow"></span></td>
         <td></td>
       </tr>`).join('')}
-    </tbody></table></div>`;
+    </tbody></table></div></div>`;
 }
 
 function renderToolbar() {
   const pills = ['all', 'published', 'draft', 'unpublished'];
   const pillLabels = { all: 'All', published: 'Published', draft: 'Draft', unpublished: 'Unpublished' };
   const filterPills = state.view === 'themes' ? `
-    <div class="filter-pills">
+    <div class="filter-pills" role="group" aria-label="Status filter">
       ${pills.map((p) => `
-        <button class="filter-pill ${state.statusFilter === p ? 'active' : ''}" data-filter="${p}">
+        <button class="filter-pill ${state.statusFilter === p ? 'active' : ''}" data-filter="${p}" aria-pressed="${state.statusFilter === p}">
           ${pillLabels[p]}
         </button>`).join('')}
     </div>` : '';
   return `
     <div class="toolbar">
-      <input class="search-input" placeholder="Search theme name hoặc ID..." value="${esc(state.search)}" />
+      <input class="search-input" placeholder="Search theme name hoặc ID..." value="${esc(state.search)}" aria-label="Search themes" />
       ${filterPills}
-      <select class="select" id="sort-select">
+      <select class="select" id="sort-select" aria-label="Sort by">
         <option value="newest" ${state.sortBy === 'newest' ? 'selected' : ''}>Newest first</option>
         <option value="oldest" ${state.sortBy === 'oldest' ? 'selected' : ''}>Oldest first</option>
         <option value="order"  ${state.sortBy === 'order'  ? 'selected' : ''}>Order (asc)</option>
@@ -777,7 +1184,6 @@ function bindToolbar() {
 }
 
 function renderRowsOnly() {
-  // Re-render just the table + manifest section (leave toolbar intact for input focus).
   const rows = currentRows();
   const container = $('.table-card, .empty');
   if (container) {
@@ -793,10 +1199,10 @@ function renderEmpty() {
     <div class="empty">
       <div class="empty-icon">
         ${isTrash
-          ? '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>'
-          : '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>'}
+          ? '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>'
+          : '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>'}
       </div>
-      <h3>${isTrash ? 'Recycle bin trống' : (state.search || state.statusFilter !== 'all' ? 'Không có kết quả' : 'Chưa có theme nào')}</h3>
+      <h3>${isTrash ? 'Thùng rác trống' : (state.search || state.statusFilter !== 'all' ? 'Không có kết quả' : 'Chưa có theme nào')}</h3>
       <p>${isTrash ? 'Theme bị xoá sẽ hiện ở đây trong 30 ngày.' : (state.search || state.statusFilter !== 'all' ? 'Thử đổi filter hoặc từ khoá search.' : 'Upload theme đầu tiên để bắt đầu.')}</p>
       ${!isTrash && !state.search && state.statusFilter === 'all'
         ? '<button class="btn btn-primary" onclick="openUploadModal()">Upload theme</button>' : ''}
@@ -807,6 +1213,7 @@ function renderTable(rows) {
   const isTrash = state.view === 'trash';
   return `
     <div class="table-card">
+      <div class="table-scroll">
       <table>
         <thead>
           <tr>
@@ -823,6 +1230,7 @@ function renderTable(rows) {
         </thead>
         <tbody>${rows.map((r) => renderRow(r, isTrash)).join('')}</tbody>
       </table>
+      </div>
     </div>`;
 }
 
@@ -834,10 +1242,10 @@ function renderRow(r, isTrash) {
   const pv = previewUrl(r);
   const freeChip = isTrash
     ? `<span class="chip ${r.is_free ? 'chip-free' : 'chip-paid'}">${r.is_free ? 'FREE' : 'PAID'}</span>`
-    : `<button class="chip chip-btn ${r.is_free ? 'chip-free' : 'chip-paid'}" data-act="toggle-free" data-id="${esc(r.id)}">${r.is_free ? 'FREE' : 'PAID'}</button>`;
+    : `<button class="chip chip-btn ${r.is_free ? 'chip-free' : 'chip-paid'}" data-act="toggle-free" data-id="${esc(r.id)}" aria-label="Toggle free/paid for ${esc(r.name)}">${r.is_free ? 'FREE' : 'PAID'}</button>`;
   const statusCell = isTrash
-    ? `<span class="cell-meta" style="font-size:12px;color:var(--text-2);">${esc(fmtDate(r.deleted_at))}</span>`
-    : `<select class="status-select" data-act="status" data-id="${esc(r.id)}">
+    ? `<span class="cell-meta">${esc(fmtDate(r.deleted_at))}</span>`
+    : `<select class="status-select" data-act="status" data-id="${esc(r.id)}" aria-label="Status for ${esc(r.name)}">
         <option value="published" ${r.status === 'published' ? 'selected' : ''}>Published</option>
         <option value="draft" ${r.status === 'draft' ? 'selected' : ''}>Draft</option>
         <option value="unpublished" ${r.status === 'unpublished' ? 'selected' : ''}>Unpublished</option>
@@ -847,14 +1255,14 @@ function renderRow(r, isTrash) {
     <button class="btn btn-danger btn-sm" data-act="hard-delete" data-id="${esc(r.id)}">Xoá vĩnh viễn</button>
   ` : `
     <div class="row-actions">
-      <button class="row-actions-btn" data-act="menu" data-id="${esc(r.id)}">⋯</button>
-      <div class="row-menu" data-menu="${esc(r.id)}">
-        <button data-act="rename" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Sửa tên</button>
-        <button data-act="replace-bundle" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Đổi bundle</button>
+      <button class="row-actions-btn" data-act="menu" data-id="${esc(r.id)}" aria-label="Actions for ${esc(r.name)}" aria-haspopup="menu" aria-expanded="false">⋯</button>
+      <div class="row-menu" data-menu="${esc(r.id)}" role="menu">
+        <button data-act="rename" data-id="${esc(r.id)}" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Sửa tên</button>
+        <button data-act="replace-bundle" data-id="${esc(r.id)}" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Đổi bundle</button>
         <hr>
-        <button data-act="copy-bundle" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy bundle URL</button>
+        <button data-act="copy-bundle" data-id="${esc(r.id)}" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy bundle URL</button>
         <hr>
-        <button class="danger" data-act="soft-delete" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> Move to trash</button>
+        <button class="danger" data-act="soft-delete" data-id="${esc(r.id)}" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> Chuyển vào thùng rác</button>
       </div>
     </div>
   `;
@@ -872,7 +1280,7 @@ function renderRow(r, isTrash) {
       <td>${freeChip}</td>
       <td>${isTrash
         ? `<span class="cell-mono">${esc(r.order_index)}</span>`
-        : `<input class="order-input" type="number" value="${esc(r.order_index)}" data-act="order" data-id="${esc(r.id)}" />`}</td>
+        : `<input class="order-input" type="number" value="${esc(r.order_index)}" data-act="order" data-id="${esc(r.id)}" aria-label="Order for ${esc(r.name)}" />`}</td>
       <td><span class="cell-mono">v${esc(r.bundle_version)}</span></td>
       <td><span class="cell-mono">${esc(fmtBytes(r.bundle_size))}</span></td>
       <td><span class="cell-mono">${esc(r.price_coins ?? 0)} 🪙</span></td>
@@ -888,7 +1296,6 @@ function bindTable() {
     if (act === 'status')        el.onchange = (e) => setStatus(id, e.target.value);
     if (act === 'order')         el.onchange = (e) => setOrder(id, e.target.value);
     if (act === 'rename')        el.onclick  = () => openRenameModal(id);
-    // replace-preview removed — previews are extracted from the zip on upload.
     if (act === 'replace-bundle')  el.onclick = () => pickAndReplaceBundle(id);
     if (act === 'copy-bundle')   el.onclick  = () => copyBundleUrl(id);
     if (act === 'soft-delete')   el.onclick  = () => softDelete(id);
@@ -900,15 +1307,27 @@ function bindTable() {
 
 document.addEventListener('click', (e) => {
   if (!e.target.closest('[data-act="menu"]')) {
-    $$('.row-menu.open').forEach((m) => m.classList.remove('open'));
+    $$('.row-menu.open').forEach((m) => {
+      m.classList.remove('open');
+      const btn = m.parentElement.querySelector('[data-act="menu"]');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    });
   }
 });
 function toggleMenu(id, e) {
   e.stopPropagation();
   const menu = $(`[data-menu="${CSS.escape(id)}"]`);
+  const btn = e.currentTarget;
   const wasOpen = menu.classList.contains('open');
-  $$('.row-menu.open').forEach((m) => m.classList.remove('open'));
-  if (!wasOpen) menu.classList.add('open');
+  $$('.row-menu.open').forEach((m) => {
+    m.classList.remove('open');
+    const b = m.parentElement.querySelector('[data-act="menu"]');
+    if (b) b.setAttribute('aria-expanded', 'false');
+  });
+  if (!wasOpen) {
+    menu.classList.add('open');
+    btn.setAttribute('aria-expanded', 'true');
+  }
 }
 
 // ============ Actions ============
@@ -917,42 +1336,47 @@ function findRow(id) {
 }
 
 async function setStatus(id, status) {
-  try { await api.patch(id, { status }); toast('Đã đổi status', `${id} → ${status}`, 'success'); await loadView('themes'); }
+  const row = findRow(id);
+  try { await api.patch(id, { status }); toast('Đã đổi status', `${row?.name || id} → ${status}`, 'success'); await loadView('themes'); }
   catch (e) { toast('Lỗi', e.message, 'error'); }
 }
 async function togglePaid(id) {
   const row = findRow(id);
   const next = !row.is_free;
-  try { await api.patch(id, { isFree: next }); toast('Đã cập nhật', `${id} → ${next ? 'FREE' : 'PAID'}`, 'success'); row.is_free = next; renderRowsOnly(); }
+  try { await api.patch(id, { isFree: next }); toast('Đã cập nhật', `${row.name} → ${next ? 'FREE' : 'PAID'}`, 'success'); row.is_free = next; renderRowsOnly(); }
   catch (e) { toast('Lỗi', e.message, 'error'); }
 }
 async function setOrder(id, v) {
-  try { await api.patch(id, { order: parseInt(v, 10) }); toast('Đã cập nhật order', id, 'success'); }
+  const row = findRow(id);
+  try { await api.patch(id, { order: parseInt(v, 10) }); toast('Đã cập nhật order', row?.name || id, 'success'); }
   catch (e) { toast('Lỗi', e.message, 'error'); }
 }
 
 async function softDelete(id) {
+  const row = findRow(id);
   const ok = await confirmDialog({
-    title: `Chuyển "${id}" vào Recycle Bin?`,
+    title: `Chuyển "${row?.name || id}" vào thùng rác?`,
     desc: 'Theme sẽ ẩn khỏi /manifest. Có thể restore trong 30 ngày.',
     confirmText: 'Xoá', danger: true,
   });
   if (!ok) return;
-  try { await api.softDelete(id); toast('Đã xoá', id, 'success'); refresh(); }
+  try { await api.softDelete(id); toast('Đã xoá', row?.name || id, 'success'); refresh(); }
   catch (e) { toast('Lỗi', e.message, 'error'); }
 }
 async function restore(id) {
-  try { await api.restore(id); toast('Đã restore', id, 'success'); refresh(); }
+  const row = findRow(id);
+  try { await api.restore(id); toast('Đã restore', row?.name || id, 'success'); refresh(); }
   catch (e) { toast('Lỗi', e.message, 'error'); }
 }
 async function hardDelete(id) {
+  const row = findRow(id);
   const ok = await confirmDialog({
-    title: `Xoá vĩnh viễn "${id}"?`,
+    title: `Xoá vĩnh viễn "${row?.name || id}"?`,
     desc: 'Xoá TẤT CẢ version khỏi R2 + row DB. KHÔNG recover được.',
     confirmText: 'Xoá vĩnh viễn', danger: true,
   });
   if (!ok) return;
-  try { await api.hardDelete(id); toast('Đã xoá vĩnh viễn', id, 'success'); refresh(); }
+  try { await api.hardDelete(id); toast('Đã xoá vĩnh viễn', row?.name || id, 'success'); refresh(); }
   catch (e) { toast('Lỗi', e.message, 'error'); }
 }
 
@@ -986,7 +1410,7 @@ async function pickAndReplaceBundle(id) {
   fd.append('bundle', file);
   try {
     await api.upload(fd);
-    toast('Bundle đã cập nhật', `${id} → v${row.bundle_version + 1}`, 'success'); refresh();
+    toast('Bundle đã cập nhật', `${row.name} → v${row.bundle_version + 1}`, 'success'); refresh();
   } catch (e) { toast('Lỗi upload', e.message, 'error'); }
 }
 
@@ -1001,7 +1425,7 @@ async function openRenameModal(id) {
   if (!newName || newName === row.name) return;
   try {
     await api.patch(id, { name: newName });
-    toast('Đã đổi tên', id, 'success'); refresh();
+    toast('Đã đổi tên', row.name + ' → ' + newName, 'success'); refresh();
   } catch (e) { toast('Lỗi', e.message, 'error'); }
 }
 
@@ -1010,8 +1434,8 @@ function openInputModal({ title, label, value = '', confirmText = 'OK' }) {
     const root = $('#modal-root');
     root.innerHTML = `
       <div class="backdrop" id="_input">
-        <div class="modal" style="max-width: 420px;">
-          <div class="modal-header"><h2>${esc(title)}</h2></div>
+        <div class="modal" style="max-width: 420px;" role="dialog" aria-modal="true" aria-labelledby="_input_title">
+          <div class="modal-header"><h2 id="_input_title">${esc(title)}</h2></div>
           <div class="modal-body">
             <div class="form-field">
               <label>${esc(label)}</label>
@@ -1044,10 +1468,10 @@ function openUploadModal() {
   const root = $('#modal-root');
   root.innerHTML = `
     <div class="backdrop" id="_upload">
-      <div class="modal" style="max-width: 620px;">
+      <div class="modal" style="max-width: 620px;" role="dialog" aria-modal="true" aria-labelledby="_upload_title">
         <div class="modal-header">
           <div>
-            <h2>Upload theme</h2>
+            <h2 id="_upload_title">Upload theme</h2>
             <p>File .zip sẽ được push lên Cloudflare R2 + metadata lưu Postgres.</p>
           </div>
         </div>
@@ -1092,7 +1516,7 @@ function openUploadModal() {
               <div class="form-field">
                 <label>Bundle .zip * (≤50MB)</label>
                 <label class="file-drop" data-drop="bundle">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                   <div class="name">Chọn hoặc kéo file zip vào đây</div>
                   <div class="meta" id="bundle-meta">chưa chọn</div>
                   <input type="file" name="bundle" accept=".zip" required />
@@ -1131,7 +1555,6 @@ function openUploadModal() {
     $('#bundle-meta').textContent = f ? `${f.name} · ${fmtBytes(f.size)}` : 'chưa chọn';
     $('[data-drop="bundle"]').classList.toggle('has-file', !!f);
   };
-  // Preview file inputs removed — server extracts them from the zip by convention.
   $('#_upload').addEventListener('click', (e) => {
     if (e.target.id === '_upload') closeModal();
     if (e.target.closest('[data-act="cancel"]')) closeModal();
@@ -1166,7 +1589,7 @@ function renderManifestCard() {
   return `
     <div class="manifest-card">
       <h3>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
         Live /manifest response
       </h3>
       <pre id="manifest-out">loading…</pre>

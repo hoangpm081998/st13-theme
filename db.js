@@ -136,6 +136,23 @@ const SCHEMA_SQL = `
     created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
+
+  -- Singleton row (id = 1). Admin edits these via the Coin Config tab and the
+  -- BE reads them into an in-memory cache on startup + after every UPDATE.
+  -- Each coin API response piggy-backs the current config so the client stays
+  -- in sync without polling.
+  CREATE TABLE IF NOT EXISTS coin_config (
+    id                      SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    daily_checkin_rewards   INTEGER[] NOT NULL DEFAULT ARRAY[3, 5, 7, 10, 15, 20, 30]::INTEGER[],
+    watch_ad_reward_amount  INTEGER   NOT NULL DEFAULT 3,
+    watch_ad_daily_cap      INTEGER   NOT NULL DEFAULT 5,
+    notif_bonus_amount      INTEGER   NOT NULL DEFAULT 10,
+    initial_coin_grant      INTEGER   NOT NULL DEFAULT 10,
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_by              TEXT
+  );
+
+  INSERT INTO coin_config (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 `;
 
 // Best-effort migrations for older DBs — Postgres 9.6+ supports `ADD COLUMN IF NOT EXISTS`.
