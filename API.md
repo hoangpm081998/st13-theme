@@ -74,6 +74,9 @@ Cache-Control: public, max-age=3600
       "wallpaperPreviewUrl": "https://pub-8d557592318143ec8b5fbfbbfa13480d.r2.dev/themes/dragon_ball/v3/wallpaperPreview.webp",
       "iconsPreviewUrl": "https://pub-8d557592318143ec8b5fbfbbfa13480d.r2.dev/themes/dragon_ball/v3/iconsPreview.webp",
       "widgetsPreviewUrl": "https://pub-8d557592318143ec8b5fbfbbfa13480d.r2.dev/themes/dragon_ball/v3/widgetsPreview.webp",
+      "priceBundleCoins": 5,
+      "priceIconsCoins": 3,
+      "priceWidgetsCoins": 2,
       "priceCoins": 5,
       "bundleUrl": "https://pub-8d557592318143ec8b5fbfbbfa13480d.r2.dev/themes/dragon_ball/v3/bundle.zip",
       "bundleVersion": 3,
@@ -99,7 +102,10 @@ Cache-Control: public, max-age=3600
 | `themes[].wallpaperPreviewUrl` | `string` | **yes** | Absolute HTTPS URL preview cho Wallpaper tab. `null` = theme không xuất hiện ở tab Wallpaper khi chưa download |
 | `themes[].iconsPreviewUrl` | `string` | **yes** | Absolute HTTPS URL preview cho Icons tab. `null` = theme không xuất hiện ở tab Icons khi chưa download |
 | `themes[].widgetsPreviewUrl` | `string` | **yes** | Absolute HTTPS URL preview cho Widgets tab. `null` = theme không xuất hiện ở tab Widgets khi chưa download |
-| `themes[].priceCoins` | `int` | no | Coin cost để unlock (icons + widgets + bundle). `0` = free. Wallpaper KHÔNG dùng field này (wallpaper apply chỉ show inter ad). |
+| `themes[].priceBundleCoins` | `int` | no | Coin cost để apply **full bundle** (tab Themes). `0` = free. |
+| `themes[].priceIconsCoins` | `int` | no | Coin cost để apply **chỉ icon pack** (tab Icons). `0` = free. |
+| `themes[].priceWidgetsCoins` | `int` | no | Coin cost để apply **chỉ widget skin** (tab Widgets). `0` = free. Wallpaper KHÔNG có giá coin — luôn free. |
+| `themes[].priceCoins` | `int` | no | **Legacy** — giá cũ dùng chung cho cả 3 part. App version mới đọc 3 field ở trên; field này còn để 1 release cho app cũ fallback, sau đó BE có thể xoá. |
 | `themes[].bundleUrl` | `string` | no | Absolute HTTPS URL tải bundle `.zip` |
 | `themes[].bundleVersion` | `int` | no | Version bundle, tự bump khi re-upload. Client dùng để so với cache local → biết cần re-download hay không |
 | `themes[].bundleSha256` | `string` | no | SHA-256 hex lowercase, 64 chars. Client **PHẢI** verify khi tải xong |

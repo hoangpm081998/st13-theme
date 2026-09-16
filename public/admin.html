@@ -428,12 +428,17 @@
     color: var(--text);
   }
   .row-menu {
-    position: absolute; right: 0; top: 100%;
+    /* position:fixed so the menu escapes the table's overflow:hidden clip.
+       Coordinates are set from JS in toggleMenu using the trigger button's
+       viewport rect — a position:absolute menu was getting hidden below the
+       table's clipping edge for rows near the bottom of the scroll area. */
+    position: fixed; top: 0; left: 0;
     background: var(--panel); border: 1px solid var(--border-strong);
     border-radius: var(--radius);
     box-shadow: var(--shadow-lg), 0 0 40px rgba(124,124,255,0.1);
     min-width: 220px; padding: 6px;
-    z-index: 20; margin-top: 6px;
+    /* Above sticky header (10), below modal backdrop (100). */
+    z-index: 50;
     display: none;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -1258,6 +1263,7 @@ function renderRow(r, isTrash) {
       <button class="row-actions-btn" data-act="menu" data-id="${esc(r.id)}" aria-label="Actions for ${esc(r.name)}" aria-haspopup="menu" aria-expanded="false">⋯</button>
       <div class="row-menu" data-menu="${esc(r.id)}" role="menu">
         <button data-act="rename" data-id="${esc(r.id)}" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Sửa tên</button>
+        <button data-act="edit-prices" data-id="${esc(r.id)}" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9 9c0-1.1 1.3-2 3-2s3 .9 3 2-1.3 2-3 2-3 .9-3 2 1.3 2 3 2 3-.9 3-2"/><path d="M12 6v1M12 17v1"/></svg> Sửa giá coin</button>
         <button data-act="replace-bundle" data-id="${esc(r.id)}" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Đổi bundle</button>
         <hr>
         <button data-act="copy-bundle" data-id="${esc(r.id)}" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy bundle URL</button>
@@ -1283,7 +1289,7 @@ function renderRow(r, isTrash) {
         : `<input class="order-input" type="number" value="${esc(r.order_index)}" data-act="order" data-id="${esc(r.id)}" aria-label="Order for ${esc(r.name)}" />`}</td>
       <td><span class="cell-mono">v${esc(r.bundle_version)}</span></td>
       <td><span class="cell-mono">${esc(fmtBytes(r.bundle_size))}</span></td>
-      <td><span class="cell-mono">${esc(r.price_coins ?? 0)} 🪙</span></td>
+      <td><span class="cell-mono" title="Bundle / Icons / Widgets — mỗi phần một giá">B:${esc(r.price_bundle_coins ?? 0)} · I:${esc(r.price_icons_coins ?? 0)} · W:${esc(r.price_widgets_coins ?? 0)} 🪙</span></td>
       <td>${statusCell}</td>
       <td style="text-align:right;">${actions}</td>
     </tr>`;
@@ -1296,6 +1302,7 @@ function bindTable() {
     if (act === 'status')        el.onchange = (e) => setStatus(id, e.target.value);
     if (act === 'order')         el.onchange = (e) => setOrder(id, e.target.value);
     if (act === 'rename')        el.onclick  = () => openRenameModal(id);
+    if (act === 'edit-prices')   el.onclick  = () => openEditPricesModal(id);
     if (act === 'replace-bundle')  el.onclick = () => pickAndReplaceBundle(id);
     if (act === 'copy-bundle')   el.onclick  = () => copyBundleUrl(id);
     if (act === 'soft-delete')   el.onclick  = () => softDelete(id);
@@ -1306,27 +1313,57 @@ function bindTable() {
 }
 
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('[data-act="menu"]')) {
-    $$('.row-menu.open').forEach((m) => {
-      m.classList.remove('open');
-      const btn = m.parentElement.querySelector('[data-act="menu"]');
-      if (btn) btn.setAttribute('aria-expanded', 'false');
-    });
-  }
+  // The ⋯ trigger toggles the menu itself — skip so we don't fight it.
+  if (e.target.closest('[data-act="menu"]')) return;
+  // Clicking a menu item still closes the menu (so it doesn't linger under
+  // any modal the item opens), but we let the item's own handler run.
+  closeAllRowMenus();
 });
-function toggleMenu(id, e) {
-  e.stopPropagation();
-  const menu = $(`[data-menu="${CSS.escape(id)}"]`);
-  const btn = e.currentTarget;
-  const wasOpen = menu.classList.contains('open');
+function closeAllRowMenus() {
   $$('.row-menu.open').forEach((m) => {
     m.classList.remove('open');
     const b = m.parentElement.querySelector('[data-act="menu"]');
     if (b) b.setAttribute('aria-expanded', 'false');
   });
+}
+// Menu uses position:fixed so scrolling the page would leave it hovering over
+// the wrong row. Simplest correct behaviour: close it as soon as the user
+// scrolls or the viewport resizes.
+window.addEventListener('scroll', closeAllRowMenus, true);
+window.addEventListener('resize', closeAllRowMenus);
+
+function positionRowMenu(menu, btn) {
+  const rect = btn.getBoundingClientRect();
+  const mRect = menu.getBoundingClientRect();
+  const gap = 6;
+  const edge = 8;
+  // Prefer dropping below the button; flip up if it would overflow the viewport.
+  let top = rect.bottom + gap;
+  if (top + mRect.height > window.innerHeight - edge) {
+    top = Math.max(edge, rect.top - mRect.height - gap);
+  }
+  // Right-align to the button, but clamp so the menu never leaves the viewport.
+  let left = rect.right - mRect.width;
+  if (left < edge) left = edge;
+  if (left + mRect.width > window.innerWidth - edge) {
+    left = Math.max(edge, window.innerWidth - edge - mRect.width);
+  }
+  menu.style.top = `${top}px`;
+  menu.style.left = `${left}px`;
+}
+
+function toggleMenu(id, e) {
+  e.stopPropagation();
+  const menu = $(`[data-menu="${CSS.escape(id)}"]`);
+  const btn = e.currentTarget;
+  const wasOpen = menu.classList.contains('open');
+  closeAllRowMenus();
   if (!wasOpen) {
     menu.classList.add('open');
     btn.setAttribute('aria-expanded', 'true');
+    // Must position AFTER `open` (display:block) so getBoundingClientRect
+    // reports real dimensions instead of 0×0.
+    positionRowMenu(menu, btn);
   }
 }
 
@@ -1429,6 +1466,87 @@ async function openRenameModal(id) {
   } catch (e) { toast('Lỗi', e.message, 'error'); }
 }
 
+async function openEditPricesModal(id) {
+  const row = findRow(id);
+  const initial = {
+    bundle:  Number(row.price_bundle_coins  ?? 0),
+    icons:   Number(row.price_icons_coins   ?? 0),
+    widgets: Number(row.price_widgets_coins ?? 0),
+  };
+  const next = await openPricesModal({ themeName: row.name, initial });
+  if (!next) return;
+  const patch = {};
+  if (next.bundle  !== initial.bundle)  patch.priceBundleCoins  = next.bundle;
+  if (next.icons   !== initial.icons)   patch.priceIconsCoins   = next.icons;
+  if (next.widgets !== initial.widgets) patch.priceWidgetsCoins = next.widgets;
+  if (Object.keys(patch).length === 0) return;
+  try {
+    await api.patch(id, patch);
+    toast('Đã lưu giá', `${row.name}: B:${next.bundle} · I:${next.icons} · W:${next.widgets} 🪙`, 'success');
+    refresh();
+  } catch (e) { toast('Lỗi', e.message, 'error'); }
+}
+
+function openPricesModal({ themeName, initial }) {
+  return new Promise((resolve) => {
+    const root = $('#modal-root');
+    root.innerHTML = `
+      <div class="backdrop" id="_prices">
+        <div class="modal" style="max-width: 460px;" role="dialog" aria-modal="true" aria-labelledby="_prices_title">
+          <div class="modal-header"><h2 id="_prices_title">Sửa giá coin — ${esc(themeName)}</h2></div>
+          <div class="modal-body">
+            <div class="form-field">
+              <label>Giá Bundle (apply full theme)</label>
+              <input type="number" id="_price_bundle" min="0" max="1000" value="${esc(initial.bundle)}" />
+              <span class="hint">Tab Themes. 0 = free.</span>
+            </div>
+            <div class="form-field">
+              <label>Giá Icons (chỉ icon pack)</label>
+              <input type="number" id="_price_icons" min="0" max="1000" value="${esc(initial.icons)}" />
+              <span class="hint">Tab Icons. 0 = free.</span>
+            </div>
+            <div class="form-field">
+              <label>Giá Widgets (chỉ widget skin)</label>
+              <input type="number" id="_price_widgets" min="0" max="1000" value="${esc(initial.widgets)}" />
+              <span class="hint">Tab Widgets. 0 = free. Wallpaper luôn free.</span>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" data-act="cancel">Huỷ</button>
+            <button class="btn btn-primary" data-act="ok">Lưu</button>
+          </div>
+        </div>
+      </div>`;
+    const inputs = {
+      bundle:  $('#_price_bundle'),
+      icons:   $('#_price_icons'),
+      widgets: $('#_price_widgets'),
+    };
+    inputs.bundle.focus(); inputs.bundle.select();
+    const read = () => {
+      const clamp = (v) => Math.max(0, Math.min(1000, parseInt(v, 10) || 0));
+      return {
+        bundle:  clamp(inputs.bundle.value),
+        icons:   clamp(inputs.icons.value),
+        widgets: clamp(inputs.widgets.value),
+      };
+    };
+    const close = (v) => { root.innerHTML = ''; resolve(v); };
+    $('#_prices').addEventListener('click', (e) => {
+      if (e.target.id === '_prices') close(null);
+      const act = e.target.closest('[data-act]')?.dataset.act;
+      if (act === 'cancel') close(null);
+      if (act === 'ok') close(read());
+    });
+    Object.values(inputs).forEach((el) => {
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') close(read());
+        if (e.key === 'Escape') close(null);
+      });
+    });
+  });
+}
+
 function openInputModal({ title, label, value = '', confirmText = 'OK' }) {
   return new Promise((resolve) => {
     const root = $('#modal-root');
@@ -1503,9 +1621,21 @@ function openUploadModal() {
             </div>
             <div class="form-row">
               <div class="form-field">
-                <label>Giá coin (0 = free)</label>
-                <input type="number" name="priceCoins" min="0" max="1000" value="0" />
-                <span class="hint">Số coin user cần trả để unlock. Wallpaper KHÔNG áp dụng — chỉ dùng cho icons/widgets/bundle apply.</span>
+                <label>Giá Bundle (apply full theme)</label>
+                <input type="number" name="priceBundleCoins" min="0" max="1000" value="0" />
+                <span class="hint">Tab Themes — apply cả bundle. 0 = free.</span>
+              </div>
+              <div class="form-field">
+                <label>Giá Icons (chỉ icon pack)</label>
+                <input type="number" name="priceIconsCoins" min="0" max="1000" value="0" />
+                <span class="hint">Tab Icons — apply riêng icon pack. 0 = free.</span>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field">
+                <label>Giá Widgets (chỉ widget skin)</label>
+                <input type="number" name="priceWidgetsCoins" min="0" max="1000" value="0" />
+                <span class="hint">Tab Widgets — apply riêng widget skin. 0 = free. Wallpaper KHÔNG có giá — luôn free.</span>
               </div>
               <div class="form-field">
                 <label>&nbsp;</label>

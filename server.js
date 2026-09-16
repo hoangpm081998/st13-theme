@@ -365,6 +365,11 @@ function themeRow(row) {
     wallpaperPreviewUrl: row.wallpaper_preview_path ? r2.publicUrl(row.wallpaper_preview_path) : null,
     iconsPreviewUrl: row.icons_preview_path ? r2.publicUrl(row.icons_preview_path) : null,
     widgetsPreviewUrl: row.widgets_preview_path ? r2.publicUrl(row.widgets_preview_path) : null,
+    priceBundleCoins:  Number(row.price_bundle_coins)  || 0,
+    priceIconsCoins:   Number(row.price_icons_coins)   || 0,
+    priceWidgetsCoins: Number(row.price_widgets_coins) || 0,
+    // Legacy single-price field. Kept for one release so old installs (pre per-part
+    // split) can still read a fallback. Drop after every install has upgraded.
     priceCoins: Number(row.price_coins) || 0,
     bundleUrl: r2.publicUrl(row.bundle_path),
     bundleVersion: row.bundle_version,
@@ -433,7 +438,10 @@ app.post(
   ]),
   async (req, res) => {
     try {
-      const { id, isFree, order, minAppVersion, status, priceCoins } = req.body;
+      const {
+        id, isFree, order, minAppVersion, status,
+        priceCoins, priceBundleCoins, priceIconsCoins, priceWidgetsCoins,
+      } = req.body;
       const bundle = req.files?.bundle?.[0];
       if (!id || !req.body.name || !bundle) {
         return res.status(400).json({ error: 'id, name, bundle are required' });
@@ -459,6 +467,13 @@ app.post(
       }
 
       const priceCoinsInt = Math.max(0, Math.min(1000, parseInt(priceCoins || '0', 10) || 0));
+      // Per-part prices: each defaults to legacy `priceCoins` if the admin form
+      // didn't send the new field — keeps the pre-split form working during rollout.
+      const clampPrice = (v) =>
+        Math.max(0, Math.min(1000, parseInt(v ?? priceCoinsInt, 10) || 0));
+      const priceBundleInt  = clampPrice(priceBundleCoins);
+      const priceIconsInt   = clampPrice(priceIconsCoins);
+      const priceWidgetsInt = clampPrice(priceWidgetsCoins);
 
       // Auto-bump bundle_version.
       const { rows: existingRows } = await query(
@@ -491,8 +506,9 @@ app.post(
         `INSERT INTO themes (
            id, name, is_free, order_index, bundle_version, bundle_sha256, bundle_size,
            bundle_path, preview_path, wallpaper_preview_path, icons_preview_path, widgets_preview_path,
-           price_coins, min_app_version, status, updated_at
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
+           price_coins, price_bundle_coins, price_icons_coins, price_widgets_coins,
+           min_app_version, status, updated_at
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW())
          ON CONFLICT (id) DO UPDATE SET
            name = EXCLUDED.name,
            is_free = EXCLUDED.is_free,
@@ -506,6 +522,9 @@ app.post(
            icons_preview_path     = COALESCE(EXCLUDED.icons_preview_path,     themes.icons_preview_path),
            widgets_preview_path   = COALESCE(EXCLUDED.widgets_preview_path,   themes.widgets_preview_path),
            price_coins            = EXCLUDED.price_coins,
+           price_bundle_coins     = EXCLUDED.price_bundle_coins,
+           price_icons_coins      = EXCLUDED.price_icons_coins,
+           price_widgets_coins    = EXCLUDED.price_widgets_coins,
            min_app_version = EXCLUDED.min_app_version,
            status = EXCLUDED.status,
            deleted_at = NULL,
@@ -524,6 +543,9 @@ app.post(
           previewKeys.icons      || null,
           previewKeys.widgets    || null,
           priceCoinsInt,
+          priceBundleInt,
+          priceIconsInt,
+          priceWidgetsInt,
           minAppVersion || '0.0.1',
           status || 'published',
         ],
@@ -617,7 +639,13 @@ app.patch('/admin/themes/:id', audit('patch'), async (req, res) => {
       name: 'name',
       minAppVersion: 'min_app_version',
       priceCoins: 'price_coins',
+      priceBundleCoins: 'price_bundle_coins',
+      priceIconsCoins: 'price_icons_coins',
+      priceWidgetsCoins: 'price_widgets_coins',
     };
+    const PRICE_COLUMNS = new Set([
+      'price_coins', 'price_bundle_coins', 'price_icons_coins', 'price_widgets_coins',
+    ]);
     const allowedStatus = new Set(['published', 'draft', 'unpublished']);
     const updates = [];
     const params = [];
@@ -646,10 +674,10 @@ app.patch('/admin/themes/:id', audit('patch'), async (req, res) => {
         }
         value = v;
       }
-      else if (col === 'price_coins') {
+      else if (PRICE_COLUMNS.has(col)) {
         value = parseInt(v, 10);
         if (!Number.isFinite(value) || value < 0 || value > 1000) {
-          return res.status(400).json({ error: 'priceCoins must be 0..1000' });
+          return res.status(400).json({ error: `${k} must be 0..1000` });
         }
       }
       else value = v;
@@ -965,7 +993,9 @@ app.post('/coin/init', express.json(), async (req, res) => {
     const rawSeed = Math.max(0, Math.min(1_000_000, parseInt(seed.balance || 0, 10) || 0));
     const seedBalance = Math.max(rawSeed, coinOnboardingBonus());
     const seedUnlocked = Array.isArray(seed.unlockedThemeIds)
-      ? seed.unlockedThemeIds.filter((s) => typeof s === 'string' && s.length <= 64).slice(0, 500)
+      // Length ceiling covers both bare themeId (max 64) and composite
+      // "themeId:widgets" (64 + 1 + 7 = 72). 96 gives headroom for future parts.
+      ? seed.unlockedThemeIds.filter((s) => typeof s === 'string' && s.length <= 96).slice(0, 500)
       : [];
     // Insert only if not exists — anti-cheat.
     await query(
@@ -982,22 +1012,35 @@ app.post('/coin/init', express.json(), async (req, res) => {
   }
 });
 
+// Which manifest column holds the price for each part, plus the app-side enum
+// value the client sends. Buying part=bundle also unlocks the icons + widgets
+// composite keys (combo discount).
+const PART_PRICE_COLUMN = {
+  bundle:  'price_bundle_coins',
+  icons:   'price_icons_coins',
+  widgets: 'price_widgets_coins',
+};
+
 app.post('/coin/spend', express.json(), async (req, res) => {
   try {
     const deviceId = String(req.body?.device_id || '');
     const themeId = String(req.body?.theme_id || '');
     const clientCost = parseInt(req.body?.cost || 0, 10) || 0;
+    // Legacy clients (pre per-part split) don't send `part` — treat as "bundle"
+    // so their apply-full-theme flow keeps working during rollout.
+    const part = String(req.body?.part || 'bundle');
     if (!isValidDeviceId(deviceId)) return res.status(400).json({ error: 'invalid device_id' });
     if (!themeId || themeId.length > 64) return res.status(400).json({ error: 'invalid theme_id' });
     if (clientCost < 0 || clientCost > 1000) return res.status(400).json({ error: 'invalid cost' });
+    if (!PART_PRICE_COLUMN[part]) return res.status(400).json({ error: 'invalid part' });
 
-    // Server-authoritative price. Look up the theme's ACTUAL published price;
-    // ignore whatever the client sent as `cost` (which is display-only). Prevents
-    // a hacked client from claiming a paid theme is free by sending cost=0, and
-    // prevents the race where the app's manifest sync hasn't populated priceCoins
-    // yet at the moment the user tapped Apply.
+    // Server-authoritative price. Look up the theme's ACTUAL published price
+    // for THIS part; ignore whatever the client sent as `cost` (display-only).
+    // Falls back to legacy `price_coins` if the per-part column is 0 — protects
+    // themes uploaded before the split until every row is re-priced.
+    const priceCol = PART_PRICE_COLUMN[part];
     const themeRow = await query(
-      `SELECT price_coins
+      `SELECT ${priceCol} AS part_price, price_coins
        FROM themes
        WHERE id = $1 AND deleted_at IS NULL AND status = 'published'`,
       [themeId],
@@ -1005,14 +1048,22 @@ app.post('/coin/spend', express.json(), async (req, res) => {
     // If the theme is not published on the server (e.g. a locally-bundled free
     // theme like `attack_on_titan` shipped in the APK), fall back to clientCost
     // capped at 1000 — such themes are typically free (0) anyway.
-    const serverPrice = themeRow.rowCount > 0
-      ? Math.max(0, Number(themeRow.rows[0].price_coins) || 0)
-      : Math.min(clientCost, 1000);
+    let serverPrice;
+    if (themeRow.rowCount > 0) {
+      const row = themeRow.rows[0];
+      const partPrice = Number(row.part_price) || 0;
+      const legacyPrice = Number(row.price_coins) || 0;
+      serverPrice = Math.max(0, partPrice > 0 ? partPrice : legacyPrice);
+    } else {
+      serverPrice = Math.min(clientCost, 1000);
+    }
 
     const state = await getOrCreateState(deviceId);
     const unlocked = state.unlocked_theme_ids || [];
-    if (unlocked.includes(themeId)) {
-      // Idempotent — already unlocked, don't charge again.
+    const compositeKey = `${themeId}:${part}`;
+    // Bare themeId in the unlock set = pre-split legacy full-unlock marker.
+    // Composite key = the new per-part marker. Either satisfies THIS part.
+    if (unlocked.includes(themeId) || unlocked.includes(compositeKey)) {
       return res.json({ ok: true, alreadyUnlocked: true, chargedCost: 0, ...stateToPayload(state) });
     }
     if (state.balance < serverPrice) {
@@ -1022,13 +1073,23 @@ app.post('/coin/spend', express.json(), async (req, res) => {
         ...stateToPayload(state),
       });
     }
+    // Combo: paying for the bundle unlocks all 3 parts atomically. Solo icons/
+    // widgets purchases only unlock that single part.
+    const keysToAdd = part === 'bundle'
+      ? [`${themeId}:bundle`, `${themeId}:icons`, `${themeId}:widgets`]
+      : [compositeKey];
+    // array(SELECT DISTINCT UNNEST(existing || added)) dedups against whatever
+    // was there before — guards against a double-tap adding "asteroid:icons"
+    // twice, and against re-adding a key already present from a legacy full-unlock.
     await query(
       `UPDATE user_coin_state
        SET balance = balance - $2,
-           unlocked_theme_ids = array_append(unlocked_theme_ids, $3),
+           unlocked_theme_ids = ARRAY(
+             SELECT DISTINCT UNNEST(unlocked_theme_ids || $3::text[])
+           ),
            updated_at = NOW()
        WHERE device_id = $1`,
-      [deviceId, serverPrice, themeId],
+      [deviceId, serverPrice, keysToAdd],
     );
     const fresh = await readState(deviceId);
     res.json({ ok: true, chargedCost: serverPrice, ...stateToPayload(fresh) });

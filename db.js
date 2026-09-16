@@ -67,6 +67,9 @@ const SCHEMA_SQL = `
     wallpaper_preview_path TEXT,
     icons_preview_path     TEXT,
     widgets_preview_path   TEXT,
+    price_bundle_coins  INTEGER NOT NULL DEFAULT 0,
+    price_icons_coins   INTEGER NOT NULL DEFAULT 0,
+    price_widgets_coins INTEGER NOT NULL DEFAULT 0,
     min_app_version TEXT NOT NULL DEFAULT '0.0.1',
     status          TEXT NOT NULL DEFAULT 'draft'
                      CHECK (status IN ('draft', 'published', 'unpublished')),
@@ -161,6 +164,23 @@ const MIGRATIONS_SQL = `
   ALTER TABLE themes ADD COLUMN IF NOT EXISTS icons_preview_path     TEXT;
   ALTER TABLE themes ADD COLUMN IF NOT EXISTS widgets_preview_path   TEXT;
   ALTER TABLE themes ADD COLUMN IF NOT EXISTS price_coins            INTEGER NOT NULL DEFAULT 0;
+  -- Per-part pricing: bundle / icons / widgets each priced independently.
+  -- Legacy price_coins is kept for one release as a fallback the app can
+  -- read if the 3 new columns are absent from an older manifest response.
+  ALTER TABLE themes ADD COLUMN IF NOT EXISTS price_bundle_coins   INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE themes ADD COLUMN IF NOT EXISTS price_icons_coins    INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE themes ADD COLUMN IF NOT EXISTS price_widgets_coins  INTEGER NOT NULL DEFAULT 0;
+  -- One-shot backfill for rows that predate the split: if all 3 new columns
+  -- are still 0 but legacy price_coins > 0, mirror the old single price into
+  -- every part so nothing suddenly turns free after the migration.
+  UPDATE themes
+    SET price_bundle_coins  = price_coins,
+        price_icons_coins   = price_coins,
+        price_widgets_coins = price_coins
+    WHERE price_coins > 0
+      AND price_bundle_coins = 0
+      AND price_icons_coins = 0
+      AND price_widgets_coins = 0;
   -- Onboarding bonus: every new device_id INSERT auto-receives 10 free coins
   -- (COIN_ONBOARDING_BONUS in server.js — keep in sync).
   -- Update column default so future INSERTs (via getOrCreateState) get 10, not 0/5.
