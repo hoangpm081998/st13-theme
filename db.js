@@ -129,7 +129,12 @@ const SCHEMA_SQL = `
 
   CREATE TABLE IF NOT EXISTS user_coin_state (
     device_id             TEXT PRIMARY KEY,
-    balance               INTEGER NOT NULL DEFAULT 10,
+    -- Column-level default is a safety net only; the real seed comes from
+    -- coin_config.initial_coin_grant via server.js:getOrCreateState() → INSERT
+    -- passes the admin-configured value explicitly. Leave at 0 so anyone
+    -- inserting directly (migration script, hotfix SQL) surfaces as "no bonus"
+    -- rather than silently minting coins.
+    balance               INTEGER NOT NULL DEFAULT 0,
     unlocked_theme_ids    TEXT[] NOT NULL DEFAULT '{}',
     streak_day            INTEGER NOT NULL DEFAULT 0,
     last_checkin_date     DATE,
@@ -149,8 +154,8 @@ const SCHEMA_SQL = `
     daily_checkin_rewards   INTEGER[] NOT NULL DEFAULT ARRAY[3, 5, 7, 10, 15, 20, 30]::INTEGER[],
     watch_ad_reward_amount  INTEGER   NOT NULL DEFAULT 3,
     watch_ad_daily_cap      INTEGER   NOT NULL DEFAULT 5,
-    notif_bonus_amount      INTEGER   NOT NULL DEFAULT 10,
-    initial_coin_grant      INTEGER   NOT NULL DEFAULT 10,
+    notif_bonus_amount      INTEGER   NOT NULL DEFAULT 3,
+    initial_coin_grant      INTEGER   NOT NULL DEFAULT 3,
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_by              TEXT
   );

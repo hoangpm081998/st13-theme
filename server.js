@@ -834,8 +834,8 @@ const COIN_CFG_DEFAULTS = Object.freeze({
   dailyCheckinRewards: [3, 5, 7, 10, 15, 20, 30],
   watchAdRewardAmount: 3,
   watchAdDailyCap: 5,
-  notifBonusAmount: 10,
-  initialCoinGrant: 10,
+  notifBonusAmount: 3,
+  initialCoinGrant: 3,
 });
 let coinCfg = { ...COIN_CFG_DEFAULTS, updatedAt: null, updatedBy: null };
 
@@ -914,10 +914,13 @@ async function readState(deviceId) {
 }
 
 async function getOrCreateState(deviceId) {
+  // Seed the initial balance from admin-configured coin_config.initial_coin_grant
+  // (via coinOnboardingBonus()) so the admin UI is the single source of truth.
+  // The DB column default is only a safety net for rows created outside this path.
   await query(
-    `INSERT INTO user_coin_state (device_id) VALUES ($1)
+    `INSERT INTO user_coin_state (device_id, balance) VALUES ($1, $2)
      ON CONFLICT (device_id) DO NOTHING`,
-    [deviceId],
+    [deviceId, coinOnboardingBonus()],
   );
   return readState(deviceId);
 }
