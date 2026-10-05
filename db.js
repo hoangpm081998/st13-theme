@@ -141,6 +141,7 @@ const SCHEMA_SQL = `
     watch_ads_today       INTEGER NOT NULL DEFAULT 0,
     watch_ads_today_date  DATE,
     notif_bonus_claimed   BOOLEAN NOT NULL DEFAULT false,
+    fsi_bonus_claimed     BOOLEAN NOT NULL DEFAULT false,
     created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
@@ -155,6 +156,7 @@ const SCHEMA_SQL = `
     watch_ad_reward_amount  INTEGER   NOT NULL DEFAULT 3,
     watch_ad_daily_cap      INTEGER   NOT NULL DEFAULT 5,
     notif_bonus_amount      INTEGER   NOT NULL DEFAULT 3,
+    fsi_bonus_amount        INTEGER   NOT NULL DEFAULT 3,
     initial_coin_grant      INTEGER   NOT NULL DEFAULT 3,
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_by              TEXT
@@ -191,6 +193,9 @@ const MIGRATIONS_SQL = `
   -- Update column default so future INSERTs (via getOrCreateState) get 10, not 0/5.
   -- Existing rows are NOT retroactively bumped by this — only new devices going forward.
   ALTER TABLE user_coin_state ALTER COLUMN balance SET DEFAULT 10;
+  -- One-shot bonus khi user bật USE_FULL_SCREEN_INTENT (Android 14+). Mirror notif_bonus.
+  ALTER TABLE user_coin_state ADD COLUMN IF NOT EXISTS fsi_bonus_claimed BOOLEAN NOT NULL DEFAULT false;
+  ALTER TABLE coin_config     ADD COLUMN IF NOT EXISTS fsi_bonus_amount  INTEGER NOT NULL DEFAULT 3;
 `;
 
 async function ensureSchema() {

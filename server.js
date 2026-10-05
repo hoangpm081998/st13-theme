@@ -744,6 +744,7 @@ app.get('/admin/coin-config', (_req, res) => {
     watchAdRewardAmount: coinCfg.watchAdRewardAmount,
     watchAdDailyCap:     coinCfg.watchAdDailyCap,
     notifBonusAmount:    coinCfg.notifBonusAmount,
+    fsiBonusAmount:      coinCfg.fsiBonusAmount,
     initialCoinGrant:    coinCfg.initialCoinGrant,
     updatedAt:           coinCfg.updatedAt,
     updatedBy:           coinCfg.updatedBy,
@@ -779,6 +780,9 @@ app.put('/admin/coin-config', audit('coin-config-update'), async (req, res) => {
     const watchAdRewardAmount = validateInt('watchAdRewardAmount', 0, 10000);
     const watchAdDailyCap     = validateInt('watchAdDailyCap',     0, 100);
     const notifBonusAmount    = validateInt('notifBonusAmount',    0, 100000);
+    // Optional for older admin.html builds: fall back to the current value.
+    const fsiBonusAmount      = b.fsiBonusAmount === undefined ? coinCfg.fsiBonusAmount
+                                                                : validateInt('fsiBonusAmount', 0, 100000);
     const initialCoinGrant    = validateInt('initialCoinGrant',    0, 100000);
 
     if (errs.length) return res.status(400).json({ error: 'invalid config', details: errs });
@@ -790,10 +794,11 @@ app.put('/admin/coin-config', audit('coin-config-update'), async (req, res) => {
            watch_ad_daily_cap     = $3,
            notif_bonus_amount     = $4,
            initial_coin_grant     = $5,
+           fsi_bonus_amount       = $7,
            updated_at             = NOW(),
            updated_by             = $6
        WHERE id = 1`,
-      [rewards, watchAdRewardAmount, watchAdDailyCap, notifBonusAmount, initialCoinGrant, req.adminEmail],
+      [rewards, watchAdRewardAmount, watchAdDailyCap, notifBonusAmount, initialCoinGrant, req.adminEmail, fsiBonusAmount],
     );
     await loadCoinConfig();   // reload in-memory cache so getters return the new values immediately
     res.json({
@@ -802,6 +807,7 @@ app.put('/admin/coin-config', audit('coin-config-update'), async (req, res) => {
       watchAdRewardAmount: coinCfg.watchAdRewardAmount,
       watchAdDailyCap:     coinCfg.watchAdDailyCap,
       notifBonusAmount:    coinCfg.notifBonusAmount,
+      fsiBonusAmount:      coinCfg.fsiBonusAmount,
       initialCoinGrant:    coinCfg.initialCoinGrant,
       updatedAt:           coinCfg.updatedAt,
       updatedBy:           coinCfg.updatedBy,
@@ -835,6 +841,7 @@ const COIN_CFG_DEFAULTS = Object.freeze({
   watchAdRewardAmount: 3,
   watchAdDailyCap: 5,
   notifBonusAmount: 3,
+  fsiBonusAmount: 3,
   initialCoinGrant: 3,
 });
 let coinCfg = { ...COIN_CFG_DEFAULTS, updatedAt: null, updatedBy: null };
@@ -843,7 +850,7 @@ async function loadCoinConfig() {
   try {
     const { rows } = await query(
       `SELECT daily_checkin_rewards, watch_ad_reward_amount, watch_ad_daily_cap,
-              notif_bonus_amount, initial_coin_grant, updated_at, updated_by
+              notif_bonus_amount, fsi_bonus_amount, initial_coin_grant, updated_at, updated_by
        FROM coin_config WHERE id = 1`,
     );
     if (rows[0]) {
@@ -853,6 +860,7 @@ async function loadCoinConfig() {
         watchAdRewardAmount: r.watch_ad_reward_amount,
         watchAdDailyCap:     r.watch_ad_daily_cap,
         notifBonusAmount:    r.notif_bonus_amount,
+        fsiBonusAmount:      r.fsi_bonus_amount ?? COIN_CFG_DEFAULTS.fsiBonusAmount,
         initialCoinGrant:    r.initial_coin_grant,
         updatedAt:           r.updated_at,
         updatedBy:           r.updated_by,
@@ -867,6 +875,7 @@ function coinCycleLength()         { return coinCfg.dailyCheckinRewards.length; 
 function coinWatchAdsCap()         { return coinCfg.watchAdDailyCap; }
 function coinWatchAdRewardAmount() { return coinCfg.watchAdRewardAmount; }
 function coinNotifBonusAmount()    { return coinCfg.notifBonusAmount; }
+function coinFsiBonusAmount()      { return coinCfg.fsiBonusAmount; }
 function coinOnboardingBonus()     { return coinCfg.initialCoinGrant; }
 
 function isValidDeviceId(id) {
@@ -902,7 +911,8 @@ const STATE_SELECT_COLS = `
   to_char(last_checkin_date, 'YYYY-MM-DD') AS last_checkin_date,
   watch_ads_today,
   to_char(watch_ads_today_date, 'YYYY-MM-DD') AS watch_ads_today_date,
-  notif_bonus_claimed
+  notif_bonus_claimed,
+  fsi_bonus_claimed
 `;
 
 async function readState(deviceId) {
@@ -959,6 +969,7 @@ function stateToPayload(row) {
     watchAdsToday: usedTodayEffective,
     watchAdsTodayDate: usedTodayEffective > 0 ? watchDate : null,
     notifBonusClaimed: !!row.notif_bonus_claimed,
+    fsiBonusClaimed: !!row.fsi_bonus_claimed,
     dailyCheckin: {
       canClaimToday,
       nextClaimDay,
@@ -1210,6 +1221,35 @@ app.post('/coin/notif-bonus', express.json(), async (req, res) => {
     res.json({ ok: true, awarded: bonus, ...stateToPayload(fresh) });
   } catch (err) {
     console.error('[coin/notif-bonus]', err);
+    res.status(500).json({ error: 'internal error' });
+  }
+});
+
+// One-shot bonus khi user bật USE_FULL_SCREEN_INTENT (Android 14+). Mirror /coin/notif-bonus.
+app.post('/coin/fsi-bonus', express.json(), async (req, res) => {
+  try {
+    const deviceId = String(req.body?.device_id || '');
+    if (!isValidDeviceId(deviceId)) return res.status(400).json({ error: 'invalid device_id' });
+    const state = await getOrCreateState(deviceId);
+    if (state.fsi_bonus_claimed) return res.json({ ok: false, alreadyClaimed: true, awarded: 0, ...stateToPayload(state) });
+    const bonus = coinFsiBonusAmount();
+    const updated = await query(
+      `UPDATE user_coin_state
+       SET balance = balance + $2,
+           fsi_bonus_claimed = true,
+           updated_at = NOW()
+       WHERE device_id = $1
+         AND fsi_bonus_claimed = false`,
+      [deviceId, bonus],
+    );
+    if (updated.rowCount === 0) {
+      const fresh = await readState(deviceId);
+      return res.json({ ok: false, alreadyClaimed: true, awarded: 0, ...stateToPayload(fresh) });
+    }
+    const fresh = await readState(deviceId);
+    res.json({ ok: true, awarded: bonus, ...stateToPayload(fresh) });
+  } catch (err) {
+    console.error('[coin/fsi-bonus]', err);
     res.status(500).json({ error: 'internal error' });
   }
 });
