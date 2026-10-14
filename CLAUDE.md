@@ -62,6 +62,9 @@ Uploads land in `data/uploads/<themeId>/v<version>/{bundle.zip, preview.<ext>}` 
 | `PATCH /admin/themes/:id` | ✅ | Whitelisted fields only: `status`, `isFree`, `order`, `name`, `minAppVersion`. |
 | `DELETE /admin/themes/:id` (`?permanent=true`) | ✅ | Default = soft delete. Permanent also `rm -rf` the upload dir. |
 | `POST /admin/themes/:id/restore` | ✅ | Un-soft-delete. |
+| `GET /control-center/manifest` | public | Control Center skins — separate catalog (table `control_centers`, R2 prefix `control-centers/`), unrelated to themes. One `priceCoins` per skin. |
+| `GET /admin/control-centers`, `POST /admin/control-centers/upload`, `PATCH`/`DELETE /admin/control-centers/:id` | ✅ | Admin row "Control Center". Upload = multipart `bundle` zip (must contain `theme.json`) + `id`, `name`, optional `order`/`status`/`priceCoins`; omitted optionals keep the stored value. PATCH whitelist: `status`, `order`, `name`, `priceCoins`. DELETE is always permanent. |
+| `POST /coin/spend` | public | `part`: `bundle` \| `icons` \| `widgets` (priced from `themes`) or `control_center` (priced from `control_centers`, not part of the bundle combo). |
 | `GET /files/*` | public | Static serve of `data/uploads/`. **Delete this route in production** — Bunny CDN serves the files. |
 
 ## Non-obvious constraints

@@ -863,8 +863,9 @@ function confirmDialog({ title, desc, confirmText = 'Confirm', danger = false })
 
 // ============ State ============
 const state = {
-  view: 'themes',      // 'themes' | 'coin' | 'trash'
+  view: 'themes',      // 'themes' | 'cc' | 'coin' | 'trash'
   themes: null,        // array or null (loading)
+  cc: null,            // Control Center skins — separate catalog from themes
   trash: null,
   coin: null,          // {dailyCheckinRewards, watchAdRewardAmount, ...} or null (loading)
   search: '',
@@ -874,6 +875,7 @@ const state = {
 
 const NAV = [
   { key: 'themes', label: 'Themes', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' },
+  { key: 'cc', label: 'Control Center', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="9" cy="7" r="2.5"/><circle cx="15" cy="17" r="2.5"/></svg>' },
   { key: 'coin', label: 'Coin Config', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9 9c0-1.1 1.3-2 3-2s3 .9 3 2-1.3 2-3 2-3 .9-3 2 1.3 2 3 2 3-.9 3-2"/><path d="M12 6v1M12 17v1"/></svg>' },
   { key: 'trash', label: 'Thùng rác', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>' },
 ];
@@ -898,12 +900,15 @@ function switchView(v) {
 }
 
 // ============ API ============
+// Control Center rows reuse the theme actions; only the base path differs.
+const adminBase = () => (state.view === 'cc' ? '/admin/control-centers' : '/admin/themes');
 const api = {
   themes: (trash = false) =>
     fetch('/admin/themes' + (trash ? '?trash=true' : '')).then(r => r.json()),
+  controlCenters: () => fetch('/admin/control-centers').then(r => r.json()),
   upload: (fd, onProgress) => new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/admin/upload');
+    xhr.open('POST', state.view === 'cc' ? '/admin/control-centers/upload' : '/admin/upload');
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total);
     };
@@ -915,13 +920,13 @@ const api = {
     xhr.onerror = () => reject(new Error('network error'));
     xhr.send(fd);
   }),
-  patch: (id, body) => fetch('/admin/themes/' + id, {
+  patch: (id, body) => fetch(adminBase() + '/' + id, {
     method: 'PATCH', headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
   }).then(r => r.json()),
-  softDelete: (id) => fetch('/admin/themes/' + id, { method: 'DELETE' }).then(r => r.json()),
+  softDelete: (id) => fetch(adminBase() + '/' + id, { method: 'DELETE' }).then(r => r.json()),
   restore: (id) => fetch('/admin/themes/' + id + '/restore', { method: 'POST' }).then(r => r.json()),
-  hardDelete: (id) => fetch('/admin/themes/' + id + '?permanent=true', { method: 'DELETE' }).then(r => r.json()),
+  hardDelete: (id) => fetch(adminBase() + '/' + id + '?permanent=true', { method: 'DELETE' }).then(r => r.json()),
   replacePreview: (id, file, slot = 'main') => {
     const fd = new FormData(); fd.append('preview', file);
     return fetch('/admin/themes/' + id + '/preview?slot=' + encodeURIComponent(slot), {
@@ -937,8 +942,9 @@ const api = {
 
 async function loadView(v) {
   try {
-    if (v === 'coin') state.coin = await api.getCoinConfig();
-    else              state[v]   = await api.themes(v === 'trash');
+    if (v === 'coin')    state.coin = await api.getCoinConfig();
+    else if (v === 'cc') state.cc   = await api.controlCenters();
+    else                 state[v]   = await api.themes(v === 'trash');
     renderNav();
     render();
   } catch (err) {
@@ -947,7 +953,7 @@ async function loadView(v) {
 }
 
 function refresh() {
-  state.themes = null; state.trash = null; state.coin = null;
+  state.themes = null; state.trash = null; state.coin = null; state.cc = null;
   render();
   loadView(state.view);
 }
@@ -975,15 +981,16 @@ function currentRows() {
 
 // ============ Render ============
 function render() {
-  const titles = { themes: 'Themes', coin: 'Coin Config', trash: 'Thùng rác' };
+  const titles = { themes: 'Themes', cc: 'Control Center', coin: 'Coin Config', trash: 'Thùng rác' };
   const subs = {
     themes: 'Quản lý theme + upload lên Cloudflare R2',
+    cc: 'Skin Control Center — catalog riêng, không liên quan theme. Mỗi skin một giá coin.',
     coin: 'Chỉnh số coin — daily check-in, watch ad, notif bonus, onboarding grant',
     trash: 'Theme đã xoá — 30 ngày sau tự purge vĩnh viễn',
   };
   $('#view-title').textContent = titles[state.view];
   $('#view-sub').textContent = subs[state.view];
-  $('#upload-btn').style.display = state.view === 'themes' ? '' : 'none';
+  $('#upload-btn').style.display = state.view === 'themes' || state.view === 'cc' ? '' : 'none';
 
   const src = state[state.view];
   const content = $('#content');
@@ -1220,7 +1227,50 @@ function renderEmpty() {
     </div>`;
 }
 
+function renderCcTable(rows) {
+  const icon = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  return `
+    <div class="table-card">
+      <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th></th><th>Skin</th><th>Order</th><th>Ver</th><th>Size</th><th>Price</th><th>Status</th><th style="text-align:right;">Actions</th></tr>
+        </thead>
+        <tbody>${rows.map((r) => `
+          <tr data-id="${esc(r.id)}">
+            <td class="thumb-cell"><div class="thumb">
+              ${r.preview_url ? `<img src="${esc(r.preview_url)}" alt="" loading="lazy" onerror="this.style.display='none'"/>` : esc(r.id.slice(0, 3).toUpperCase())}
+            </div></td>
+            <td><div class="cell-name">${esc(r.name)}</div><div class="cell-id">${esc(r.id)}</div></td>
+            <td><input class="order-input" type="number" value="${esc(r.order_index)}" data-act="order" data-id="${esc(r.id)}" aria-label="Order for ${esc(r.name)}" /></td>
+            <td><span class="cell-mono">v${esc(r.bundle_version)}</span></td>
+            <td><span class="cell-mono">${esc(fmtBytes(r.bundle_size))}</span></td>
+            <td><span class="cell-mono">${esc(r.price_coins ?? 0)} 🪙</span></td>
+            <td><select class="status-select" data-act="status" data-id="${esc(r.id)}" aria-label="Status for ${esc(r.name)}">
+              ${['published', 'draft', 'unpublished'].map((v) => `<option value="${v}" ${r.status === v ? 'selected' : ''}>${v[0].toUpperCase() + v.slice(1)}</option>`).join('')}
+            </select></td>
+            <td style="text-align:right;">
+              <div class="row-actions">
+                <button class="row-actions-btn" data-act="menu" data-id="${esc(r.id)}" aria-label="Actions for ${esc(r.name)}" aria-haspopup="menu" aria-expanded="false">⋯</button>
+                <div class="row-menu" data-menu="${esc(r.id)}" role="menu">
+                  <button data-act="rename" data-id="${esc(r.id)}" role="menuitem">${icon('<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>')} Sửa tên</button>
+                  <button data-act="edit-price" data-id="${esc(r.id)}" role="menuitem">${icon('<circle cx="12" cy="12" r="9"/><path d="M9 9c0-1.1 1.3-2 3-2s3 .9 3 2-1.3 2-3 2-3 .9-3 2 1.3 2 3 2 3-.9 3-2"/><path d="M12 6v1M12 17v1"/>')} Sửa giá coin</button>
+                  <button data-act="replace-bundle" data-id="${esc(r.id)}" role="menuitem">${icon('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>')} Đổi bundle</button>
+                  <hr>
+                  <button data-act="copy-bundle" data-id="${esc(r.id)}" role="menuitem">${icon('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>')} Copy bundle URL</button>
+                  <hr>
+                  <button class="danger" data-act="hard-delete" data-id="${esc(r.id)}" role="menuitem">${icon('<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>')} Xoá vĩnh viễn</button>
+                </div>
+              </div>
+            </td>
+          </tr>`).join('')}</tbody>
+      </table>
+      </div>
+    </div>`;
+}
+
 function renderTable(rows) {
+  if (state.view === 'cc') return renderCcTable(rows);
   const isTrash = state.view === 'trash';
   return `
     <div class="table-card">
@@ -1309,6 +1359,7 @@ function bindTable() {
     if (act === 'order')         el.onchange = (e) => setOrder(id, e.target.value);
     if (act === 'rename')        el.onclick  = () => openRenameModal(id);
     if (act === 'edit-prices')   el.onclick  = () => openEditPricesModal(id);
+    if (act === 'edit-price')    el.onclick  = () => editCcPrice(id);
     if (act === 'replace-bundle')  el.onclick = () => pickAndReplaceBundle(id);
     if (act === 'copy-bundle')   el.onclick  = () => copyBundleUrl(id);
     if (act === 'soft-delete')   el.onclick  = () => softDelete(id);
@@ -1375,12 +1426,12 @@ function toggleMenu(id, e) {
 
 // ============ Actions ============
 function findRow(id) {
-  return (state.themes || []).find(r => r.id === id) || (state.trash || []).find(r => r.id === id);
+  return (state[state.view] || []).find(r => r.id === id);
 }
 
 async function setStatus(id, status) {
   const row = findRow(id);
-  try { await api.patch(id, { status }); toast('Đã đổi status', `${row?.name || id} → ${status}`, 'success'); await loadView('themes'); }
+  try { await api.patch(id, { status }); toast('Đã đổi status', `${row?.name || id} → ${status}`, 'success'); await loadView(state.view); }
   catch (e) { toast('Lỗi', e.message, 'error'); }
 }
 async function togglePaid(id) {
@@ -1450,6 +1501,10 @@ async function pickAndReplaceBundle(id) {
   fd.append('order', String(row.order_index));
   fd.append('status', row.status);
   fd.append('minAppVersion', row.min_app_version);
+  // Resend the stored prices: /admin/upload overwrites any price it is not given with 0.
+  for (const [field, col] of [['priceCoins', 'price_coins'], ['priceBundleCoins', 'price_bundle_coins'], ['priceIconsCoins', 'price_icons_coins'], ['priceWidgetsCoins', 'price_widgets_coins']]) {
+    if (row[col] != null) fd.append(field, String(row[col]));
+  }
   fd.append('bundle', file);
   try {
     await api.upload(fd);
@@ -1469,6 +1524,25 @@ async function openRenameModal(id) {
   try {
     await api.patch(id, { name: newName });
     toast('Đã đổi tên', row.name + ' → ' + newName, 'success'); refresh();
+  } catch (e) { toast('Lỗi', e.message, 'error'); }
+}
+
+async function editCcPrice(id) {
+  const row = findRow(id);
+  const input = await openInputModal({
+    title: `Sửa giá coin — ${row.name}`,
+    label: 'Giá coin (0..1000, 0 = free)',
+    value: String(row.price_coins ?? 0),
+    confirmText: 'Lưu',
+  });
+  if (input === null || input === '') return;
+  const price = parseInt(input, 10);
+  if (!Number.isFinite(price) || price < 0 || price > 1000) { toast('Giá không hợp lệ', 'Nhập số 0..1000', 'error'); return; }
+  if (price === Number(row.price_coins)) return;
+  try {
+    const data = await api.patch(id, { priceCoins: price });
+    if (data.error) throw new Error(data.error);
+    toast('Đã lưu giá', `${row.name}: ${price} 🪙`, 'success'); refresh();
   } catch (e) { toast('Lỗi', e.message, 'error'); }
 }
 
@@ -1589,13 +1663,14 @@ function openInputModal({ title, label, value = '', confirmText = 'OK' }) {
 
 // ============ Upload modal ============
 function openUploadModal() {
+  const cc = state.view === 'cc';
   const root = $('#modal-root');
   root.innerHTML = `
     <div class="backdrop" id="_upload">
       <div class="modal" style="max-width: 620px;" role="dialog" aria-modal="true" aria-labelledby="_upload_title">
         <div class="modal-header">
           <div>
-            <h2 id="_upload_title">Upload theme</h2>
+            <h2 id="_upload_title">${cc ? 'Upload Control Center skin' : 'Upload theme'}</h2>
             <p>File .zip sẽ được push lên Cloudflare R2 + metadata lưu Postgres.</p>
           </div>
         </div>
@@ -1612,7 +1687,18 @@ function openUploadModal() {
                 <span class="hint">tự sinh từ Tên. Regex: [a-z0-9_]+</span>
               </div>
             </div>
-            <div class="form-row">
+${cc ? `            <div class="form-row">
+              <div class="form-field">
+                <label>Giá coin</label>
+                <input type="number" name="priceCoins" min="0" max="1000" value="0" />
+                <span class="hint">Giá mở khoá skin này trong tab Control Center. 0 = free.</span>
+              </div>
+              <div class="form-field">
+                <label>Order (thấp = ưu tiên)</label>
+                <input type="number" name="order" value="999" />
+              </div>
+            </div>
+` : `            <div class="form-row">
               <div class="form-field">
                 <label>Free?</label>
                 <select name="isFree">
@@ -1648,6 +1734,7 @@ function openUploadModal() {
                 <div style="height: 40px;"></div>
               </div>
             </div>
+`}
             <div class="form-row">
               <div class="form-field">
                 <label>Bundle .zip * (≤50MB)</label>
@@ -1657,13 +1744,16 @@ function openUploadModal() {
                   <div class="meta" id="bundle-meta">chưa chọn</div>
                   <input type="file" name="bundle" accept=".zip" required />
                 </label>
-                <span class="hint">
+${cc ? `                <span class="hint">
+                  Zip nội dung thư mục skin: <code>theme.json</code>, <code>slider_colors.json</code>,
+                  <code>icons/</code>, wallpaper. <code>preview.webp</code> ở root (tuỳ chọn) làm ảnh xem trước.
+                </span>` : `                <span class="hint">
                   Server tự đọc 4 preview từ zip theo tên chuẩn ở root:
                   <code>preview.webp</code>, <code>preview_wallpaper.webp</code>,
                   <code>preview_icons.webp</code>, <code>preview_widgets.webp</code>
                   (chấp nhận .png / .jpg / .jpeg / .gif thay .webp).
                   File nào thiếu → theme sẽ không xuất hiện ở tab tương ứng.
-                </span>
+                </span>`}
               </div>
               <div class="form-field">
                 <label>Status</label>

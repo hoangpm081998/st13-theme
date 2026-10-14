@@ -736,6 +736,205 @@ app.post('/admin/themes/:id/restore', audit('restore'), async (req, res) => {
   }
 });
 
+// -------------------- control center endpoints --------------------
+// Control Center skins are their own catalog — separate table, R2 prefix and
+// manifest from launcher themes. An id may exist in both.
+
+const CC_PREFIX = 'control-centers';
+const CC_STATUS = new Set(['published', 'draft', 'unpublished']);
+const ID_RE = /^[a-z0-9_]+$/;
+
+// Public — used by the Android app.
+app.get('/control-center/manifest', async (_req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT * FROM control_centers WHERE status = 'published'
+       ORDER BY order_index ASC, created_at ASC`,
+    );
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.json({
+      version: Date.now(),
+      themes: rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        previewUrl: row.preview_path ? r2.publicUrl(row.preview_path) : null,
+        priceCoins: Number(row.price_coins) || 0,
+        bundleUrl: r2.publicUrl(row.bundle_path),
+        bundleVersion: row.bundle_version,
+        bundleSha256: row.bundle_sha256,
+        bundleSize: Number(row.bundle_size),
+      })),
+    });
+  } catch (err) {
+    console.error('[cc manifest]', err);
+    res.status(500).json({ error: 'internal error' });
+  }
+});
+
+app.get('/admin/control-centers', async (_req, res) => {
+  try {
+    const { rows } = await query('SELECT * FROM control_centers ORDER BY created_at DESC');
+    res.json(rows.map((r) => ({
+      ...r,
+      bundle_size: Number(r.bundle_size),
+      preview_url: r.preview_path ? r2.publicUrl(r.preview_path) : null,
+      bundle_url: r2.publicUrl(r.bundle_path),
+    })));
+  } catch (err) {
+    console.error('[cc list]', err);
+    res.status(500).json({ error: 'internal error' });
+  }
+});
+
+// multipart: `bundle` (zip of the skin folder: theme.json, slider_colors.json,
+// icons/, wallpaper) + id, name, and optional order / status / priceCoins.
+// Upsert on `id`; omitted optional fields keep their stored value, so
+// re-uploading a bundle never resets the price.
+app.post(
+  '/admin/control-centers/upload',
+  audit('cc-upload'),
+  upload.single('bundle'),
+  async (req, res) => {
+    try {
+      const { id, order, status, priceCoins } = req.body;
+      const bundle = req.file;
+      if (!id || !req.body.name || !bundle) {
+        return res.status(400).json({ error: 'id, name, bundle are required' });
+      }
+      if (!ID_RE.test(id) || id.length > 64) {
+        return res.status(400).json({ error: 'id must match ^[a-z0-9_]+$ (max 64 chars)' });
+      }
+      if (status && !CC_STATUS.has(status)) return res.status(400).json({ error: 'invalid status' });
+
+      let name;
+      try { name = sanitizeName(req.body.name); }
+      catch (e) { return res.status(400).json({ error: e.message }); }
+
+      try {
+        assertSafeZip(bundle.buffer);
+        const hasConfig = new AdmZip(bundle.buffer).getEntries()
+          .some((e) => /(^|\/)theme\.json$/.test(e.entryName) && !e.entryName.startsWith('__MACOSX/'));
+        if (!hasConfig) throw new Error('theme.json not found');
+      } catch (e) { return res.status(400).json({ error: 'bundle rejected: ' + e.message }); }
+
+      const optInt = (v, max) => {
+        if (v === undefined || v === '') return null;
+        const n = parseInt(v, 10);
+        return Number.isFinite(n) ? Math.max(0, Math.min(max, n)) : null;
+      };
+      const preview = extractPreviewsFromZip(bundle.buffer).main;   // root preview.<ext>, optional
+
+      const { rows: existingRows } = await query(
+        'SELECT bundle_version FROM control_centers WHERE id = $1',
+        [id],
+      );
+      const newVersion = existingRows[0] ? existingRows[0].bundle_version + 1 : 1;
+      const sha256 = crypto.createHash('sha256').update(bundle.buffer).digest('hex');
+      const size = bundle.buffer.length;
+      const bundleKey = `${CC_PREFIX}/${id}/v${newVersion}/bundle.zip`;
+      const previewKey = preview ? `${CC_PREFIX}/${id}/v${newVersion}/preview.${preview.ext}` : null;
+
+      // R2 uploads FIRST (no DB row pointing at a missing object).
+      await r2.uploadObject(bundleKey, bundle.buffer, 'application/zip');
+      if (preview) await r2.uploadObject(previewKey, preview.buffer, preview.mime);
+
+      await query(
+        `INSERT INTO control_centers (
+           id, name, order_index, bundle_version, bundle_sha256, bundle_size,
+           bundle_path, preview_path, price_coins, status, updated_at
+         ) VALUES ($1, $2, COALESCE($3::int, 999), $4, $5, $6, $7, $8,
+                   COALESCE($9::int, 0), COALESCE($10, 'published'), NOW())
+         ON CONFLICT (id) DO UPDATE SET
+           name = EXCLUDED.name,
+           order_index = COALESCE($3::int, control_centers.order_index),
+           bundle_version = EXCLUDED.bundle_version,
+           bundle_sha256 = EXCLUDED.bundle_sha256,
+           bundle_size = EXCLUDED.bundle_size,
+           bundle_path = EXCLUDED.bundle_path,
+           preview_path = COALESCE(EXCLUDED.preview_path, control_centers.preview_path),
+           price_coins = COALESCE($9::int, control_centers.price_coins),
+           status = COALESCE($10, control_centers.status),
+           updated_at = NOW()`,
+        [
+          id, name, optInt(order, 100000), newVersion, sha256, size,
+          bundleKey, previewKey, optInt(priceCoins, 1000), status || null,
+        ],
+      );
+
+      r2.purgeOldVersions(id, newVersion, 3, CC_PREFIX).catch((e) => {
+        console.warn('[cc retention]', id, e.message);
+      });
+
+      res.json({ ok: true, id, bundleVersion: newVersion, bundleSha256: sha256, bundleSize: size, bundlePath: bundleKey });
+    } catch (err) {
+      console.error('[cc upload]', err);
+      res.status(500).json({ error: 'upload failed' });
+    }
+  },
+);
+
+// Whitelisted fields: status, order, name, priceCoins.
+app.patch('/admin/control-centers/:id', audit('cc-patch'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!ID_RE.test(id)) return res.status(400).json({ error: 'invalid id' });
+    const body = req.body || {};
+    const updates = [];
+    const params = [];
+    const set = (col, value) => { params.push(value); updates.push(`${col} = $${params.length}`); };
+    const intIn = (v, max) => {
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) && n >= 0 && n <= max ? n : null;
+    };
+    if ('status' in body) {
+      if (!CC_STATUS.has(body.status)) return res.status(400).json({ error: 'invalid status' });
+      set('status', body.status);
+    }
+    if ('name' in body) {
+      try { set('name', sanitizeName(body.name)); }
+      catch (e) { return res.status(400).json({ error: e.message }); }
+    }
+    if ('order' in body) {
+      const n = intIn(body.order, 100000);
+      if (n === null) return res.status(400).json({ error: 'order must be 0..100000' });
+      set('order_index', n);
+    }
+    if ('priceCoins' in body) {
+      const n = intIn(body.priceCoins, 1000);
+      if (n === null) return res.status(400).json({ error: 'priceCoins must be 0..1000' });
+      set('price_coins', n);
+    }
+    if (updates.length === 0) return res.status(400).json({ error: 'no valid fields' });
+    params.push(id);
+    const result = await query(
+      `UPDATE control_centers SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${params.length}`,
+      params,
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[cc patch]', err);
+    res.status(500).json({ error: 'patch failed' });
+  }
+});
+
+// Always permanent — hide a skin with status=unpublished instead.
+app.delete('/admin/control-centers/:id', audit('cc-delete'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!ID_RE.test(id)) return res.status(400).json({ error: 'invalid id' });
+    const { rows } = await query('SELECT 1 FROM control_centers WHERE id = $1', [id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'not found' });
+    const objects = await r2.listObjects(`${CC_PREFIX}/${id}/`);
+    await Promise.all(objects.map((o) => r2.deleteObject(o.key)));
+    await query('DELETE FROM control_centers WHERE id = $1', [id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[cc delete]', err);
+    res.status(500).json({ error: 'delete failed' });
+  }
+});
+
 // -------------------- coin config admin --------------------
 
 app.get('/admin/coin-config', (_req, res) => {
@@ -1046,19 +1245,29 @@ app.post('/coin/spend', express.json(), async (req, res) => {
     if (!isValidDeviceId(deviceId)) return res.status(400).json({ error: 'invalid device_id' });
     if (!themeId || themeId.length > 64) return res.status(400).json({ error: 'invalid theme_id' });
     if (clientCost < 0 || clientCost > 1000) return res.status(400).json({ error: 'invalid cost' });
-    if (!PART_PRICE_COLUMN[part]) return res.status(400).json({ error: 'invalid part' });
+    // Control Center skins are priced in their own table and sold separately
+    // from the bundle combo.
+    const isControlCenter = part === 'control_center';
+    if (!isControlCenter && !PART_PRICE_COLUMN[part]) return res.status(400).json({ error: 'invalid part' });
 
     // Server-authoritative price. Look up the theme's ACTUAL published price
     // for THIS part; ignore whatever the client sent as `cost` (display-only).
     // Falls back to legacy `price_coins` if the per-part column is 0 — protects
     // themes uploaded before the split until every row is re-priced.
     const priceCol = PART_PRICE_COLUMN[part];
-    const themeRow = await query(
-      `SELECT ${priceCol} AS part_price, price_coins
-       FROM themes
-       WHERE id = $1 AND deleted_at IS NULL AND status = 'published'`,
-      [themeId],
-    );
+    const themeRow = isControlCenter
+      ? await query(
+        `SELECT price_coins AS part_price, 0 AS price_coins
+         FROM control_centers
+         WHERE id = $1 AND status = 'published'`,
+        [themeId],
+      )
+      : await query(
+        `SELECT ${priceCol} AS part_price, price_coins
+         FROM themes
+         WHERE id = $1 AND deleted_at IS NULL AND status = 'published'`,
+        [themeId],
+      );
     // If the theme is not published on the server (e.g. a locally-bundled free
     // theme like `attack_on_titan` shipped in the APK), fall back to clientCost
     // capped at 1000 — such themes are typically free (0) anyway.

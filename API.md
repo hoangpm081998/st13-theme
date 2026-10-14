@@ -431,6 +431,43 @@ Rồi trong `AndroidManifest.xml`: `<application android:networkSecurityConfig="
 | Date | Change |
 |---|---|
 | 2026-08-26 | v1 initial release. Endpoint `/manifest`, R2 CDN, contract locked. |
+| 2026-10-13 | Control Center skins — catalog riêng, không đụng `/manifest`. Xem Appendix D. |
+
+---
+
+## Appendix D — Control Center skins
+
+Catalog riêng (bảng `control_centers`, R2 prefix `control-centers/`), không liên quan theme; một id có thể tồn tại ở cả hai.
+
+### `GET /control-center/manifest` (public, `Cache-Control: max-age=3600`)
+
+```json
+{
+  "version": 1791882095565,
+  "themes": [
+    {
+      "id": "doraemon",
+      "name": "Doraemon",
+      "previewUrl": "https://.../control-centers/doraemon/v1/preview.webp",
+      "priceCoins": 6,
+      "bundleUrl": "https://.../control-centers/doraemon/v1/bundle.zip",
+      "bundleVersion": 1,
+      "bundleSha256": "...",
+      "bundleSize": 1843200
+    }
+  ]
+}
+```
+
+Chỉ trả skin `status = published`. `previewUrl` là `null` khi zip không có `preview.<ext>` ở root.
+
+### `POST /coin/spend` với `part: "control_center"`
+
+`theme_id` là id skin. Giá = `priceCoins` của skin đang published; skin không có trên server (chỉ bundle trong APK) thì dùng `cost` client gửi, giống theme bundle sẵn. Unlock key: `"{theme_id}:control_center"`. Mua `part: "bundle"` KHÔNG mở khoá Control Center.
+
+### Bundle zip
+
+Nội dung thư mục skin, `theme.json` bắt buộc (ở root hoặc trong một thư mục bọc ngoài): `theme.json`, `slider_colors.json`, `icons/`, ảnh wallpaper, `preview.<ext>` tuỳ chọn.
 
 ---
 

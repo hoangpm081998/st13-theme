@@ -108,11 +108,11 @@ function publicUrl(key) {
 }
 
 /** Delete old bundle versions per retention policy (keep last N). */
-async function purgeOldVersions(themeId, currentVersion, keep = 3) {
+async function purgeOldVersions(themeId, currentVersion, keep = 3, prefix = 'themes') {
   const cutoff = currentVersion - keep;
   const jobs = [];
   for (let v = 1; v <= cutoff; v++) {
-    const base = `themes/${themeId}/v${v}`;
+    const base = `${prefix}/${themeId}/v${v}`;
     jobs.push(
       deleteObject(`${base}/bundle.zip`),
       deleteObject(`${base}/preview.webp`),

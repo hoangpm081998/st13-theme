@@ -84,6 +84,24 @@ const SCHEMA_SQL = `
   CREATE INDEX IF NOT EXISTS idx_themes_deleted_at
     ON themes(deleted_at);
 
+  -- Control Center skins: their own catalog, unrelated to launcher themes
+  -- (an id may exist in both tables). One price per skin.
+  CREATE TABLE IF NOT EXISTS control_centers (
+    id              TEXT PRIMARY KEY,
+    name            TEXT NOT NULL,
+    order_index     INTEGER NOT NULL DEFAULT 999,
+    bundle_version  INTEGER NOT NULL,
+    bundle_sha256   TEXT NOT NULL,
+    bundle_size     BIGINT NOT NULL,
+    bundle_path     TEXT NOT NULL,
+    preview_path    TEXT,
+    price_coins     INTEGER NOT NULL DEFAULT 0,
+    status          TEXT NOT NULL DEFAULT 'draft'
+                     CHECK (status IN ('draft', 'published', 'unpublished')),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+
   CREATE TABLE IF NOT EXISTS admin_users (
     email         TEXT PRIMARY KEY,
     password_hash TEXT NOT NULL,
